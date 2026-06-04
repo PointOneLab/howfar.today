@@ -4,6 +4,7 @@ dist-ssr
 coverage
 *.local
 .vite
+*.tsbuildinfo
 
 # Editor / OS
 .DS_Store
