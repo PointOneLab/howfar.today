@@ -30,9 +30,14 @@ These decisions were locked in during pre-implementation alignment:
 
 ### Conventions & defaults (chosen by judgment, tweakable)
 
-- App opens on the **Focus** slide (slide 1).
+- App opens on the **Day Visualizer** (main) slide.
 - No analytics / telemetry (privacy-first; sharing exposes only the bare URL).
-- Past segments are locked/uneditable; present and future segments are editable.
+- **Goals are editable in every state** (past included). Completion can be toggled on
+  the active and past segments while the routine window is running.
+- **No animations** except the deliberate slide "fade-through-black" transition;
+  progress fills update instantly to the current time (no catch-up animation).
+- Changing structure (start/end hour, segments-per-hour) **prunes goals/completion**
+  that no longer map to a segment — removed slots are erased permanently.
 - All persisted state lives in `localStorage` behind a storage abstraction; **no backend** in the MVP.
 
 ## 3. Tech Stack
@@ -55,8 +60,8 @@ These decisions were locked in during pre-implementation alignment:
   `100dvw × 100dvh` (`dvw`/`dvh` to avoid mobile browser-chrome shifts).
 - **Relative sizing mandate:** all dimensions, paddings, strokes, and font sizes use
   fluid relative units (`vw`, `vh`, `%`).
-- **Scroll-snapping** between slides (wheel, touch, trackpad) with hardware-accelerated
-  smooth navigation.
+- **Scroll-snapping** between slides (wheel, touch, trackpad) with a "fade-through-black"
+  transition: the outgoing slide darkens and the incoming slide lightens.
 - **Up/Down arrows** move between slides when not editing a grid input.
 
 ## 5. Screen Specifications
@@ -67,8 +72,9 @@ These decisions were locked in during pre-implementation alignment:
   duration), smoothly animated.
 - **Header**: the running segment's bounds, e.g. `07:15 — 07:30`.
 - **Centered goal** in large typography (falls back to `Focus` when empty).
-- **Status button** (bottom center): toggles the active segment to _Completed_ (fill turns
-  to the success color) and back (_revert_).
+- **Status button** (bottom center): toggles the active segment to _Completed_ and back
+  (_revert_). Completion only recolors the fill to the success color — the fill **width
+  still reflects real elapsed time**.
 - If a segment elapses uncompleted and status coloring is on, it locks as _Failed_.
 - Outside the window: neutral "day not started / complete" state.
 
@@ -79,20 +85,25 @@ These decisions were locked in during pre-implementation alignment:
 - Per segment (always left-aligned): a passive grayed **time indicator** (monospace —
   hour for the first sub-segment, else the starting minute) and a borderless inline
   **goal input** with graceful ellipsis overflow.
-- Future & present goals are editable; **past goals are locked and grayed**.
+- **Goals are editable in every state** (including past).
 - Segment backgrounds reflect state via tokens: void (future), active progress fill,
   success (completed), failure (failed), neutral (past with coloring off).
-- Completion can be toggled only on the **active** segment (here or in Focus).
+- Completion can be toggled on the **active or past** segments (here or in Focus) while
+  the window is running.
 
 ### Slide 3 — Settings (bottom)
 
 - **Structure**: start hour, end hour, segments per hour (1–6).
-- **Typography**: font-scale slider (height relative to segment height; 25%–75%).
+- **Typography & spacing**: independent sliders for **goal text size** (25%–75%),
+  **time-indicator size** (10%–60%), and the **horizontal segment gap** (0–3 vw).
 - **Colors**: swatches for every design token + grid stroke thickness.
-- **Behavior**: status-coloring on/off.
+- **Behavior**: status-coloring on/off — governs **both** the success and failure colors
+  (off → completed and missed segments alike fall back to neutral).
 - **Data portability**: Export to CSV (all parameters, tokens, and goals, spreadsheet
   friendly) and Import from CSV (validated against constraints before applying).
 - **Native share**: invokes the browser share sheet with only the bare app URL.
+- **Resets**: _Reset content_ (clear all goals + completion) and _Reset design_ (restore
+  default colors, fonts, spacing, and behavior).
 - **Credits**: ultra-minimal footnote.
 
 ## 6. Enhanced Interaction & Utility
