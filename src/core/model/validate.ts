@@ -2,9 +2,13 @@ import type { AppConfig, BehaviorConfig, DesignTokens, Routine, StructuralConfig
 import {
   MAX_FONT_SCALE_PCT,
   MAX_GOAL_LENGTH,
+  MAX_SEGMENT_GAP,
   MAX_SEGMENTS_PER_HOUR,
+  MAX_TIME_SCALE_PCT,
   MIN_FONT_SCALE_PCT,
+  MIN_SEGMENT_GAP,
   MIN_SEGMENTS_PER_HOUR,
+  MIN_TIME_SCALE_PCT,
   createDefaultConfig,
 } from './defaults';
 import { MINUTES_PER_DAY } from '../engine/time';
@@ -15,6 +19,11 @@ const clamp = (value: number, min: number, max: number): number =>
 const toInt = (value: unknown, fallback: number): number => {
   const n = typeof value === 'string' ? Number.parseInt(value, 10) : Number(value);
   return Number.isFinite(n) ? Math.round(n) : fallback;
+};
+
+const toNum = (value: unknown, fallback: number): number => {
+  const n = typeof value === 'string' ? Number.parseFloat(value) : Number(value);
+  return Number.isFinite(n) ? n : fallback;
 };
 
 const isHexColor = (value: unknown): value is string =>
@@ -96,6 +105,12 @@ export function sanitizeConfig(input: unknown): AppConfig {
       MIN_FONT_SCALE_PCT,
       MAX_FONT_SCALE_PCT,
     ),
+    timeScalePct: clamp(
+      toInt(raw.timeScalePct, base.timeScalePct),
+      MIN_TIME_SCALE_PCT,
+      MAX_TIME_SCALE_PCT,
+    ),
+    segmentGap: clamp(toNum(raw.segmentGap, base.segmentGap), MIN_SEGMENT_GAP, MAX_SEGMENT_GAP),
     behavior: sanitizeBehavior(raw.behavior),
     routines: { default: sanitizeRoutine(raw.routines?.default) },
     completion: {

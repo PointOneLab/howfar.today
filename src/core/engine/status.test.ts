@@ -19,12 +19,17 @@ describe('buildDayView', () => {
     expect(view.activeProgress).toBeCloseTo(5 / 15, 5);
   });
 
-  it('locks past segments and keeps future ones editable', () => {
+  it('keeps every segment editable, including past ones', () => {
     const view = buildDayView(baseConfig(), at(9, 0));
-    const past = view.segments[0];
-    const future = view.segments[view.segments.length - 1];
-    expect(past.editable).toBe(false);
-    expect(future.editable).toBe(true);
+    expect(view.segments.every((s) => s.editable)).toBe(true);
+  });
+
+  it('allows completion on active and past segments but not future ones', () => {
+    const view = buildDayView(baseConfig(), at(9, 0));
+    const activeIndex = view.activeIndex ?? -1;
+    expect(view.segments[0].completable).toBe(true); // past
+    expect(view.segments[activeIndex].completable).toBe(true); // active
+    expect(view.segments[view.segments.length - 1].completable).toBe(false); // future
   });
 
   it('fails empty past segments when status coloring is on', () => {
@@ -38,6 +43,15 @@ describe('buildDayView', () => {
     const config = baseConfig();
     config.behavior.statusColoring = false;
     const view = buildDayView(config, at(9, 0));
+    expect(view.segments[0].state).toBe('past');
+  });
+
+  it('drops success color too when status coloring is off', () => {
+    const config = baseConfig();
+    config.behavior.statusColoring = false;
+    config.completion = { windowDate: '2026-06-04', completed: [420] };
+    const view = buildDayView(config, at(9, 0));
+    // completed but coloring off → neutral past, not the success state
     expect(view.segments[0].state).toBe('past');
   });
 

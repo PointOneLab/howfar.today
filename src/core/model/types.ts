@@ -84,8 +84,12 @@ export interface AppConfig {
   version: number;
   structure: StructuralConfig;
   tokens: DesignTokens;
-  /** Typography height as a percentage of segment height. Range 25–75. */
+  /** Goal-text height as a percentage of segment height. Range 25–75. */
   fontScalePct: number;
+  /** Time-indicator height as a percentage of segment height. Range 10–60. */
+  timeScalePct: number;
+  /** Horizontal gap/padding inside a segment, in vw. Range 0–3. */
+  segmentGap: number;
   behavior: BehaviorConfig;
   routines: RoutineSet;
   completion: CompletionState;

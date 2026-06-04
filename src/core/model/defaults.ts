@@ -34,6 +34,14 @@ export const DEFAULT_FONT_SCALE_PCT = 50;
 export const MIN_FONT_SCALE_PCT = 25;
 export const MAX_FONT_SCALE_PCT = 75;
 
+export const DEFAULT_TIME_SCALE_PCT = 28;
+export const MIN_TIME_SCALE_PCT = 10;
+export const MAX_TIME_SCALE_PCT = 60;
+
+export const DEFAULT_SEGMENT_GAP = 0.6;
+export const MIN_SEGMENT_GAP = 0;
+export const MAX_SEGMENT_GAP = 3;
+
 export const MIN_SEGMENTS_PER_HOUR = 1;
 export const MAX_SEGMENTS_PER_HOUR = 6;
 
@@ -44,6 +52,8 @@ export function createDefaultConfig(): AppConfig {
     structure: { ...DEFAULT_STRUCTURE },
     tokens: { ...DEFAULT_TOKENS },
     fontScalePct: DEFAULT_FONT_SCALE_PCT,
+    timeScalePct: DEFAULT_TIME_SCALE_PCT,
+    segmentGap: DEFAULT_SEGMENT_GAP,
     behavior: { statusColoring: true },
     routines: { default: { goals: {} } },
     completion: { windowDate: '', completed: [] },
