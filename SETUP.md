@@ -21,12 +21,12 @@ below are account/infrastructure tasks that can't be done from the codebase.
 
 ## 1. Prerequisites
 
-| You need | Notes |
-|----------|-------|
-| The GitHub repo | Already exists: `PointOneLab/howfar.today`. |
-| A Cloudflare account | Free tier is enough — sign up at [dash.cloudflare.com](https://dash.cloudflare.com). |
+| You need                  | Notes                                                                                  |
+| ------------------------- | -------------------------------------------------------------------------------------- |
+| The GitHub repo           | Already exists: `PointOneLab/howfar.today`.                                            |
+| A Cloudflare account      | Free tier is enough — sign up at [dash.cloudflare.com](https://dash.cloudflare.com).   |
 | The `howfar.today` domain | Optional but recommended. Easiest if the domain is (or becomes) managed by Cloudflare. |
-| Node ≥ 20 + pnpm | Only needed if you want to run it locally. |
+| Node ≥ 20 + pnpm          | Only needed if you want to run it locally.                                             |
 
 ---
 
@@ -70,12 +70,12 @@ This is the simplest path and gives you automatic deploys on every push to `main
 2. Authorize GitHub and select the **`PointOneLab/howfar.today`** repository.
 3. Configure the build with these exact settings:
 
-   | Setting | Value |
-   |---------|-------|
-   | Production branch | `main` |
-   | Framework preset | `None` (or `Vite`) |
-   | Build command | `pnpm build` |
-   | Build output directory | `dist` |
+   | Setting                | Value              |
+   | ---------------------- | ------------------ |
+   | Production branch      | `main`             |
+   | Framework preset       | `None` (or `Vite`) |
+   | Build command          | `pnpm build`       |
+   | Build output directory | `dist`             |
 
    Node version and pnpm are detected automatically from `.node-version` and the
    `packageManager` field. If Cloudflare ever defaults to an old Node, add an
@@ -112,7 +112,7 @@ integration. It requires two secrets.
 
 1. In Cloudflare: **My Profile → API Tokens → Create Token** using the
    **"Edit Cloudflare Workers"** template (or a custom token with the
-   *Account → Cloudflare Pages → Edit* permission). Copy the token.
+   _Account → Cloudflare Pages → Edit_ permission). Copy the token.
 2. Find your **Account ID** on the dashboard home page (right sidebar).
 3. In GitHub: **Repo → Settings → Secrets and variables → Actions → New repository
    secret** and add:
@@ -151,12 +151,12 @@ No application secrets are required for the MVP.
 
 ## 9. Troubleshooting
 
-| Symptom | Fix |
-|---------|-----|
-| Build fails with an old Node error | Add env var `NODE_VERSION = 20` in the Pages project settings. |
-| Build can't find pnpm | Ensure `pnpm-lock.yaml` is committed (it is) — Cloudflare auto-detects pnpm from it. |
-| Blank page after deploy | Confirm **Build output directory** is `dist`. |
-| Domain not resolving | Check the DNS record / that the zone's nameservers point to Cloudflare; allow a few minutes for propagation. |
+| Symptom                            | Fix                                                                                                          |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Build fails with an old Node error | Add env var `NODE_VERSION = 20` in the Pages project settings.                                               |
+| Build can't find pnpm              | Ensure `pnpm-lock.yaml` is committed (it is) — Cloudflare auto-detects pnpm from it.                         |
+| Blank page after deploy            | Confirm **Build output directory** is `dist`.                                                                |
+| Domain not resolving               | Check the DNS record / that the zone's nameservers point to Cloudflare; allow a few minutes for propagation. |
 
 ---
 
