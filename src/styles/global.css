@@ -18,7 +18,9 @@
   --color-void: #141414;
   --color-grid: #1f1f1f;
   --stroke-grid: 1px;
-  --font-scale: 0.5;
+  --font-scale-goal: 0.5;
+  --font-scale-time: 0.28;
+  --segment-gap: 0.6vw;
 
   --font-primary: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'Roboto Mono', Menlo, Consolas, monospace;
@@ -85,6 +87,16 @@ button {
   overflow: hidden;
 }
 
+/* Fade-through-black transition: darkens slides as they leave the viewport. */
+.slide__mask {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: #000;
+  opacity: var(--mask-opacity, 0);
+  pointer-events: none;
+}
+
 /* --- Slide 1: Focus Mode ----------------------------------------------- */
 
 .focus {
@@ -102,9 +114,6 @@ button {
   height: 100%;
   width: 0;
   background: var(--color-progress);
-  transition:
-    width 1s linear,
-    background-color 200ms ease-out;
   z-index: 0;
 }
 
@@ -162,7 +171,6 @@ button {
   font-size: 5vh;
   color: var(--color-interact);
   cursor: pointer;
-  transition: color 150ms ease-out;
 }
 
 .focus__status:hover {
@@ -208,6 +216,7 @@ button {
   display: flex;
   align-items: center;
   overflow: hidden;
+  background: var(--color-void);
   border-left: var(--stroke-grid) solid var(--color-grid);
 }
 
@@ -219,33 +228,23 @@ button {
   position: absolute;
   inset: 0 auto 0 0;
   height: 100%;
-  width: 0;
   z-index: 0;
-}
-
-.segment--future .segment__fill {
-  background: var(--color-void);
-  width: 100%;
-}
-
-.segment--past .segment__fill {
-  background: var(--color-progress);
-  width: 100%;
-}
-
-.segment--failed .segment__fill {
-  background: var(--color-failure);
-  width: 100%;
-}
-
-.segment--completed .segment__fill {
-  background: var(--color-success);
-  width: 100%;
 }
 
 .segment--active .segment__fill {
   background: var(--color-progress);
-  transition: width 1s linear;
+}
+
+.segment--past .segment__fill {
+  background: var(--color-progress);
+}
+
+.segment--failed .segment__fill {
+  background: var(--color-failure);
+}
+
+.segment--completed .segment__fill {
+  background: var(--color-success);
 }
 
 .segment__body {
@@ -253,16 +252,16 @@ button {
   z-index: 1;
   display: flex;
   align-items: center;
-  gap: 0.6vw;
+  gap: var(--segment-gap);
   width: 100%;
   height: 100%;
-  padding: 0 0.8vw;
+  padding: 0 var(--segment-gap);
 }
 
 .segment__time {
   flex: none;
   font-family: var(--font-mono);
-  font-size: calc(var(--font-scale) * 0.55 * (100vh / var(--rows, 17)));
+  font-size: calc(var(--font-scale-time) * (100vh / var(--rows, 17)));
   color: var(--color-secondary);
   user-select: none;
 }
@@ -270,7 +269,7 @@ button {
 .segment__input {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: calc(var(--font-scale) * (100vh / var(--rows, 17)));
+  font-size: calc(var(--font-scale-goal) * (100vh / var(--rows, 17)));
   line-height: 1;
   color: var(--color-regular);
   background: transparent;
@@ -280,26 +279,12 @@ button {
 
 .segment__input::placeholder {
   color: var(--color-secondary);
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
-.segment__input:focus {
-  color: var(--color-highlight);
-}
-
+.segment__input:focus,
 .segment--active .segment__input {
   color: var(--color-highlight);
-}
-
-.segment--past .segment__input,
-.segment--failed .segment__input,
-.segment--completed .segment__input {
-  color: var(--color-regular);
-  opacity: 0.55;
-}
-
-.segment__input:disabled {
-  cursor: default;
 }
 
 .segment__check {
@@ -308,8 +293,8 @@ button {
   align-items: center;
   justify-content: center;
   height: 100%;
-  padding: 0 0.6vw;
-  font-size: calc(var(--font-scale) * 0.8 * (100vh / var(--rows, 17)));
+  padding: 0 var(--segment-gap);
+  font-size: calc(var(--font-scale-goal) * 0.8 * (100vh / var(--rows, 17)));
   color: var(--color-interact);
   cursor: pointer;
 }
@@ -420,9 +405,6 @@ button {
   height: 100%;
   width: 50%;
   background: var(--color-secondary);
-  transition:
-    left 150ms ease-out,
-    background-color 150ms ease-out;
 }
 
 .switch--on .switch__knob {
@@ -443,7 +425,6 @@ button {
   font-size: 2.1vh;
   cursor: pointer;
   border: var(--stroke-grid) solid var(--color-grid);
-  transition: color 150ms ease-out;
 }
 
 .btn:hover {
@@ -467,21 +448,6 @@ button {
 .import-status {
   font-size: 1.8vh;
   color: var(--color-secondary);
-}
-
-/* --- Slide affordance hint --------------------------------------------- */
-
-.scroll-hint {
-  position: absolute;
-  bottom: 2.5vh;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 2;
-  font-size: 1.8vh;
-  color: var(--color-secondary);
-  opacity: 0.6;
-  user-select: none;
-  pointer-events: none;
 }
 
 .visually-hidden {

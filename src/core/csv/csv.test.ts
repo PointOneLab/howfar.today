@@ -7,6 +7,8 @@ describe('CSV round-trip', () => {
     const config = createDefaultConfig();
     config.structure = { startHour: 8, endHour: 18, segmentsPerHour: 2 };
     config.fontScalePct = 60;
+    config.timeScalePct = 40;
+    config.segmentGap = 1.5;
     config.behavior.statusColoring = false;
     config.tokens.colorSuccess = '#00ff00';
     config.routines.default.goals = { 480: 'Deep work', 510: 'Email, and "stuff"' };
@@ -17,6 +19,8 @@ describe('CSV round-trip', () => {
     expect(warnings).toHaveLength(0);
     expect(restored.structure).toEqual(config.structure);
     expect(restored.fontScalePct).toBe(60);
+    expect(restored.timeScalePct).toBe(40);
+    expect(restored.segmentGap).toBe(1.5);
     expect(restored.behavior.statusColoring).toBe(false);
     expect(restored.tokens.colorSuccess).toBe('#00ff00');
     expect(restored.routines.default.goals[480]).toBe('Deep work');

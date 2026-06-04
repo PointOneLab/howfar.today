@@ -21,6 +21,8 @@ export function useDayView(now: Date): DayView {
       structure,
       tokens: DEFAULT_TOKENS,
       fontScalePct: 50,
+      timeScalePct: 28,
+      segmentGap: 0.6,
       behavior: { statusColoring },
       routines: { default: { goals } },
       completion,

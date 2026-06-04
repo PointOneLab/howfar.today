@@ -89,6 +89,8 @@ export function exportConfigToCsv(config: AppConfig): string {
   lines.push(toRow(['config', 'endHour', String(config.structure.endHour)]));
   lines.push(toRow(['config', 'segmentsPerHour', String(config.structure.segmentsPerHour)]));
   lines.push(toRow(['config', 'fontScalePct', String(config.fontScalePct)]));
+  lines.push(toRow(['config', 'timeScalePct', String(config.timeScalePct)]));
+  lines.push(toRow(['config', 'segmentGap', String(config.segmentGap)]));
   lines.push(toRow(['config', 'statusColoring', String(config.behavior.statusColoring)]));
 
   for (const key of TOKEN_KEYS) {
@@ -146,6 +148,12 @@ export function importConfigFromCsv(text: string, base?: AppConfig): CsvImportRe
             break;
           case 'fontScalePct':
             draft.fontScalePct = Number(value);
+            break;
+          case 'timeScalePct':
+            draft.timeScalePct = Number(value);
+            break;
+          case 'segmentGap':
+            draft.segmentGap = Number(value);
             break;
           case 'statusColoring':
             draft.behavior.statusColoring = /^(true|1|yes|on)$/i.test(value);

@@ -2,9 +2,13 @@ import { useRef, useState } from 'react';
 import type { DesignTokens } from '@/core/model/types';
 import {
   MAX_FONT_SCALE_PCT,
+  MAX_SEGMENT_GAP,
   MAX_SEGMENTS_PER_HOUR,
+  MAX_TIME_SCALE_PCT,
   MIN_FONT_SCALE_PCT,
+  MIN_SEGMENT_GAP,
   MIN_SEGMENTS_PER_HOUR,
+  MIN_TIME_SCALE_PCT,
 } from '@/core/model/defaults';
 import { csvFileName, exportConfigToCsv, importConfigFromCsv } from '@/core/csv/csv';
 import { selectConfig, useConfigStore } from '@/state/store';
@@ -28,14 +32,19 @@ export function SettingsSlide() {
   const structure = useConfigStore((s) => s.structure);
   const tokens = useConfigStore((s) => s.tokens);
   const fontScalePct = useConfigStore((s) => s.fontScalePct);
+  const timeScalePct = useConfigStore((s) => s.timeScalePct);
+  const segmentGap = useConfigStore((s) => s.segmentGap);
   const statusColoring = useConfigStore((s) => s.behavior.statusColoring);
 
   const setStructure = useConfigStore((s) => s.setStructure);
   const setToken = useConfigStore((s) => s.setToken);
   const setFontScale = useConfigStore((s) => s.setFontScale);
+  const setTimeScale = useConfigStore((s) => s.setTimeScale);
+  const setSegmentGap = useConfigStore((s) => s.setSegmentGap);
   const setStatusColoring = useConfigStore((s) => s.setStatusColoring);
   const replaceConfig = useConfigStore((s) => s.replaceConfig);
-  const resetConfig = useConfigStore((s) => s.resetConfig);
+  const resetContent = useConfigStore((s) => s.resetContent);
+  const resetDesign = useConfigStore((s) => s.resetDesign);
 
   const fileRef = useRef<HTMLInputElement>(null);
   const [note, setNote] = useState<string>('');
@@ -134,9 +143,9 @@ export function SettingsSlide() {
       </div>
 
       <div className="settings__section">
-        <h2 className="settings__heading">Typography</h2>
+        <h2 className="settings__heading">Typography & spacing</h2>
         <label className="field">
-          <span className="field__label">Font scale</span>
+          <span className="field__label">Goal text size</span>
           <span className="field__control">
             <input
               type="range"
@@ -146,6 +155,33 @@ export function SettingsSlide() {
               onChange={(e) => setFontScale(Number(e.target.value))}
             />
             <span>{fontScalePct}%</span>
+          </span>
+        </label>
+        <label className="field">
+          <span className="field__label">Time indicator size</span>
+          <span className="field__control">
+            <input
+              type="range"
+              min={MIN_TIME_SCALE_PCT}
+              max={MAX_TIME_SCALE_PCT}
+              value={timeScalePct}
+              onChange={(e) => setTimeScale(Number(e.target.value))}
+            />
+            <span>{timeScalePct}%</span>
+          </span>
+        </label>
+        <label className="field">
+          <span className="field__label">Segment gap</span>
+          <span className="field__control">
+            <input
+              type="range"
+              min={MIN_SEGMENT_GAP}
+              max={MAX_SEGMENT_GAP}
+              step={0.1}
+              value={segmentGap}
+              onChange={(e) => setSegmentGap(Number(e.target.value))}
+            />
+            <span>{segmentGap.toFixed(1)}vw</span>
           </span>
         </label>
       </div>
@@ -207,8 +243,11 @@ export function SettingsSlide() {
           <button type="button" className="btn" onClick={handleShare}>
             Share
           </button>
-          <button type="button" className="btn btn--ghost" onClick={resetConfig}>
-            Reset defaults
+          <button type="button" className="btn btn--ghost" onClick={resetContent}>
+            Reset content
+          </button>
+          <button type="button" className="btn btn--ghost" onClick={resetDesign}>
+            Reset design
           </button>
           <input
             ref={fileRef}

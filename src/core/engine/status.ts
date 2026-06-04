@@ -8,8 +8,10 @@ export interface SegmentView {
   segment: Segment;
   goal: string;
   state: SegmentState;
-  /** Whether the goal input may be edited (future & present, not past). */
+  /** Whether the goal input may be edited. Goals are editable in every state. */
   editable: boolean;
+  /** Whether completion may be toggled (active or past segments, in-window). */
+  completable: boolean;
   /** Whether this is the single active segment right now. */
   isActive: boolean;
   /** Whether this segment is marked completed. */
@@ -45,7 +47,12 @@ export function locateActive(
   return { phase: 'in', activeIndex, progress: Math.min(1, Math.max(0, progress)) };
 }
 
-/** Determines a single segment's render state. */
+/**
+ * Determines a single segment's render state.
+ *
+ * The status-coloring switch governs BOTH success and failure colors: when off,
+ * completed segments and missed segments alike fall back to neutral states.
+ */
 export function segmentState(
   segment: Segment,
   phase: DayPhase,
@@ -53,23 +60,26 @@ export function segmentState(
   isCompleted: boolean,
   statusColoring: boolean,
 ): SegmentState {
-  if (isCompleted) return 'completed';
   if (phase === 'before') return 'future';
 
-  if (phase === 'in' && activeIndex !== null) {
-    if (segment.index === activeIndex) return 'active';
-    if (segment.index > activeIndex) return 'future';
+  const isActive = phase === 'in' && activeIndex !== null && segment.index === activeIndex;
+  const isFuture = phase === 'in' && activeIndex !== null && segment.index > activeIndex;
+
+  if (isCompleted) {
+    if (statusColoring) return 'completed';
+    return isActive ? 'active' : 'past';
   }
 
-  // Past (either elapsed within the window, or the whole day has ended).
+  if (isActive) return 'active';
+  if (isFuture) return 'future';
+
+  // Past (elapsed within the window, or the whole day has ended).
   return statusColoring ? 'failed' : 'past';
 }
 
-/** A segment is editable in the present and future, but never in the past. */
-function isEditable(segment: Segment, phase: DayPhase, activeIndex: number | null): boolean {
-  if (phase === 'before') return true;
-  if (phase === 'after') return false;
-  return activeIndex !== null && segment.index >= activeIndex;
+/** Whether completion may be toggled: active or past segments while in-window. */
+function isCompletable(segment: Segment, phase: DayPhase, activeIndex: number | null): boolean {
+  return phase === 'in' && activeIndex !== null && segment.index <= activeIndex;
 }
 
 /** Builds the full {@link DayView} from configuration and the current time. */
@@ -85,7 +95,8 @@ export function buildDayView(config: AppConfig, now: Date): DayView {
       segment,
       goal: routine.goals[segment.minuteOfDay] ?? '',
       state: segmentState(segment, phase, activeIndex, isCompleted, config.behavior.statusColoring),
-      editable: isEditable(segment, phase, activeIndex),
+      editable: true,
+      completable: isCompletable(segment, phase, activeIndex),
       isActive: phase === 'in' && segment.index === activeIndex,
       isCompleted,
     };
