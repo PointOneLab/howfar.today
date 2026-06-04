@@ -6,15 +6,15 @@ import { useConfigStore } from '@/state/store';
 
 interface VisualizerSlideProps {
   view: DayView;
-  onToggleActiveComplete: () => void;
+  onToggleComplete: (minuteOfDay: number, currentlyCompleted: boolean) => void;
 }
 
 /**
  * Slide 2 — the day visualizer. Hour rows divide the viewport equally; each row
- * holds the configured number of sub-segments. Goals are edited inline with a
- * dedicated keyboard navigation layer (Enter / Shift+Enter / Escape).
+ * holds the configured number of sub-segments. Goals are editable inline in any
+ * state, with a dedicated keyboard layer (Enter / Shift+Enter / Escape).
  */
-export function VisualizerSlide({ view, onToggleActiveComplete }: VisualizerSlideProps) {
+export function VisualizerSlide({ view, onToggleComplete }: VisualizerSlideProps) {
   const setGoal = useConfigStore((s) => s.setGoal);
   const inputs = useRef<Map<number, HTMLInputElement>>(new Map());
 
@@ -58,25 +58,32 @@ export function VisualizerSlide({ view, onToggleActiveComplete }: VisualizerSlid
 
   return (
     <section className="slide visualizer" aria-label="Day visualizer" style={style}>
+      <div className="slide__mask" aria-hidden="true" />
       {rows.map((row, hourIndex) => (
         <div className="hour-row" key={hourIndex}>
           {row.map((segment) => {
             const sv = viewByIndex.get(segment.index);
             if (!sv) return null;
-            const fillStyle =
-              sv.state === 'active' ? { width: `${view.activeProgress * 100}%` } : undefined;
+            const fillWidth = sv.isActive
+              ? view.activeProgress * 100
+              : sv.state === 'future'
+                ? 0
+                : 100;
 
             return (
               <div className={`segment segment--${sv.state}`} key={segment.index}>
-                <div className="segment__fill" style={fillStyle} aria-hidden="true" />
+                <div
+                  className="segment__fill"
+                  style={{ width: `${fillWidth}%` }}
+                  aria-hidden="true"
+                />
                 <div className="segment__body">
                   <span className="segment__time">{segment.label}</span>
                   <input
                     className="segment__input"
                     type="text"
                     value={sv.goal}
-                    placeholder={sv.editable ? 'goal…' : ''}
-                    disabled={!sv.editable}
+                    placeholder="goal…"
                     maxLength={200}
                     aria-label={`Goal for ${segment.startLabel}`}
                     ref={(el) => {
@@ -86,11 +93,11 @@ export function VisualizerSlide({ view, onToggleActiveComplete }: VisualizerSlid
                     onChange={(e) => setGoal(segment.minuteOfDay, e.target.value)}
                     onKeyDown={(e) => handleKeyDown(e, segment.index)}
                   />
-                  {sv.isActive && (
+                  {sv.completable && (
                     <button
                       type="button"
                       className="segment__check"
-                      onClick={onToggleActiveComplete}
+                      onClick={() => onToggleComplete(segment.minuteOfDay, sv.isCompleted)}
                       aria-pressed={sv.isCompleted}
                       title={sv.isCompleted ? 'Revert completion' : 'Mark completed'}
                     >
@@ -103,9 +110,6 @@ export function VisualizerSlide({ view, onToggleActiveComplete }: VisualizerSlid
           })}
         </div>
       ))}
-      <span className="scroll-hint" aria-hidden="true">
-        ▴ focus · settings ▾
-      </span>
     </section>
   );
 }
