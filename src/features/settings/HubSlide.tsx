@@ -138,21 +138,24 @@ export function HubSlide({ onModalOpenChange }: HubSlideProps) {
 
   const handleCopyLink = async () => {
     const hasAny = shareSel.structure || shareSel.goals || shareSel.status || shareSel.design;
-    if (!hasAny) {
-      window.alert('Select at least one category to include in the link.');
-      return;
-    }
+    const includesSensitiveData = shareSel.goals || shareSel.status;
     if (
+      includesSensitiveData &&
       !window.confirm(
         'This link will contain your selected data. Anyone with the link can view it. Continue?',
       )
     ) {
       return;
     }
-    const config = selectConfig(useConfigStore.getState());
-    const payload = buildSharePayload(config, shareSel, shareMeta());
-    const hash = encodeShareHash(payload);
-    const url = buildShareUrl(window.location.origin, window.location.pathname, hash);
+    const url = hasAny
+      ? buildShareUrl(
+          window.location.origin,
+          window.location.pathname,
+          encodeShareHash(
+            buildSharePayload(selectConfig(useConfigStore.getState()), shareSel, shareMeta()),
+          ),
+        )
+      : buildShareUrl(window.location.origin, window.location.pathname, '');
     try {
       await navigator.clipboard.writeText(url);
       if (navigator.share) {
@@ -162,7 +165,7 @@ export function HubSlide({ onModalOpenChange }: HubSlideProps) {
           /* user dismissed share sheet — link is still copied */
         }
       }
-      window.alert(`Link copied (${tagsToLabel(selectionToTags(shareSel))}).`);
+      window.alert(hasAny ? `Link copied (${tagsToLabel(selectionToTags(shareSel))}).` : 'Link copied.');
     } catch {
       window.alert('Could not copy the link. Check clipboard permissions.');
     }

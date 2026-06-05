@@ -13,11 +13,12 @@ interface ShareQrPreviewProps {
 /** Live QR for the current share checkbox selection (client-side only). */
 export function ShareQrPreview({ selection, profileName }: ShareQrPreviewProps) {
   const config = useConfigStore(selectConfig);
+  const hasSelection = selection.structure || selection.goals || selection.status || selection.design;
 
   const previewUrl = useMemo(() => {
-    const hasAny =
-      selection.structure || selection.goals || selection.status || selection.design;
-    if (!hasAny) return null;
+    if (!hasSelection) {
+      return buildShareUrl(window.location.origin, window.location.pathname, '');
+    }
     const payload = buildSharePayload(config, selection, {
       profileName: profileName.trim() || 'default',
       sharedAt: new Date().toISOString(),
@@ -25,15 +26,11 @@ export function ShareQrPreview({ selection, profileName }: ShareQrPreviewProps) 
     });
     const hash = encodeShareHash(payload);
     return buildShareUrl(window.location.origin, window.location.pathname, hash);
-  }, [config, selection, profileName]);
+  }, [config, hasSelection, selection, profileName]);
 
   const [dataUrl, setDataUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!previewUrl) {
-      setDataUrl(null);
-      return;
-    }
     let cancelled = false;
     const timer = window.setTimeout(() => {
       void QRCode.toDataURL(previewUrl, {
@@ -50,12 +47,6 @@ export function ShareQrPreview({ selection, profileName }: ShareQrPreviewProps) 
     };
   }, [previewUrl]);
 
-  if (!previewUrl) {
-    return (
-      <p className="share-qr share-qr--empty">Select at least one category to preview a QR code.</p>
-    );
-  }
-
   if (!dataUrl) {
     return <p className="share-qr share-qr--empty">Generating QR code…</p>;
   }
@@ -63,7 +54,11 @@ export function ShareQrPreview({ selection, profileName }: ShareQrPreviewProps) 
   return (
     <div className="share-qr">
       <img src={dataUrl} width={200} height={200} alt="QR code for share link" />
-      <p className="share-qr__hint">Scan to open this snapshot. Updates as you change options.</p>
+      <p className="share-qr__hint">
+        {hasSelection
+          ? 'Scan to open this snapshot. Updates as you change options.'
+          : 'Scan to open the default app URL.'}
+      </p>
     </div>
   );
 }
