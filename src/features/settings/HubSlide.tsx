@@ -25,11 +25,18 @@ import {
 } from '@/core/share/payload';
 import { buildShareUrl, decodeShareHash, encodeShareHash } from '@/core/share/codec';
 import { Modal } from '@/components/Modal';
+import { ShareQrPreview } from '@/components/ShareQrPreview';
 import {
   EMPTY_SHARE_SELECTION,
   ShareSelectionFields,
 } from '@/components/ShareSelectionFields';
+import { ABOUT_SECTIONS } from '@/features/settings/aboutContent';
 import { selectConfig, useConfigStore } from '@/state/store';
+
+const SEGMENT_REDUCE_CONFIRM =
+  'Lowering segments per hour permanently removes goals and completion status in the extra slots ' +
+  '(for example, going from 4 segments to 1 keeps only the first segment of each hour). ' +
+  'This cannot be undone. Continue?';
 
 const COLOR_FIELDS: { key: keyof DesignTokens; label: string }[] = [
   { key: 'bgApp', label: 'Background' },
@@ -47,7 +54,7 @@ const COLOR_FIELDS: { key: keyof DesignTokens; label: string }[] = [
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const SEGMENT_OPTIONS = [1, 2, 3, 4, 5, 6];
 
-type HubModal = 'structure' | 'design' | 'data' | 'share' | null;
+type HubModal = 'structure' | 'design' | 'data' | 'share' | 'about' | null;
 
 interface HubSlideProps {
   onModalOpenChange: (open: boolean) => void;
@@ -55,7 +62,6 @@ interface HubSlideProps {
 
 export function HubSlide({ onModalOpenChange }: HubSlideProps) {
   const [modal, setModal] = useState<HubModal>(null);
-  const [note, setNote] = useState('');
   const [shareSel, setShareSel] = useState<ShareSelection>({ ...EMPTY_SHARE_SELECTION });
   const [csvExportSel, setCsvExportSel] = useState<ShareSelection>({
     structure: true,
@@ -124,14 +130,19 @@ export function HubSlide({ onModalOpenChange }: HubSlideProps) {
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   });
 
-  const handleShareGenerate = async () => {
+  const handleSegmentsPerHourChange = (next: number) => {
+    const prev = structure.segmentsPerHour;
+    if (next < prev && !window.confirm(SEGMENT_REDUCE_CONFIRM)) return;
+    setStructure({ segmentsPerHour: next });
+  };
+
+  const handleCopyLink = async () => {
     const hasAny = shareSel.structure || shareSel.goals || shareSel.status || shareSel.design;
     if (!hasAny) {
-      setNote('Select at least one category to include in the link.');
+      window.alert('Select at least one category to include in the link.');
       return;
     }
     if (
-      hasAny &&
       !window.confirm(
         'This link will contain your selected data. Anyone with the link can view it. Continue?',
       )
@@ -143,14 +154,17 @@ export function HubSlide({ onModalOpenChange }: HubSlideProps) {
     const hash = encodeShareHash(payload);
     const url = buildShareUrl(window.location.origin, window.location.pathname, hash);
     try {
+      await navigator.clipboard.writeText(url);
       if (navigator.share) {
-        await navigator.share({ url, title: 'howfar.today' });
-      } else {
-        await navigator.clipboard.writeText(url);
-        setNote(`Link copied (${tagsToLabel(selectionToTags(shareSel))}).`);
+        try {
+          await navigator.share({ url, title: 'howfar.today' });
+        } catch {
+          /* user dismissed share sheet — link is still copied */
+        }
       }
+      window.alert(`Link copied (${tagsToLabel(selectionToTags(shareSel))}).`);
     } catch {
-      setNote('Share cancelled.');
+      window.alert('Could not copy the link. Check clipboard permissions.');
     }
   };
 
@@ -164,7 +178,7 @@ export function HubSlide({ onModalOpenChange }: HubSlideProps) {
     anchor.download = csvFileName(config, csvExportSel);
     anchor.click();
     URL.revokeObjectURL(url);
-    setNote('CSV exported.');
+    window.alert('CSV exported.');
   };
 
   const handleImportFile = async (file: File) => {
@@ -178,9 +192,9 @@ export function HubSlide({ onModalOpenChange }: HubSlideProps) {
       pendingImport.current = { text, detected };
       setCsvImportSel(detected);
       openModal('data');
-      setNote('Choose what to import, then confirm.');
+      window.alert('Choose what to import, then tap Confirm import.');
     } catch {
-      setNote('Could not read that file.');
+      window.alert('Could not read that file.');
     }
   };
 
@@ -194,7 +208,7 @@ export function HubSlide({ onModalOpenChange }: HubSlideProps) {
     );
     replaceConfig(config);
     pendingImport.current = null;
-    setNote(
+    window.alert(
       warnings.length ? `Imported with ${warnings.length} warning(s).` : 'Imported successfully.',
     );
   };
@@ -204,6 +218,7 @@ export function HubSlide({ onModalOpenChange }: HubSlideProps) {
       <div className="slide__mask" aria-hidden="true" />
       <div className="hub__content">
         <h1 className="hub__brand">howfar.today</h1>
+        <p className="hub__tagline">This hour is all it takes.</p>
         <nav className="hub__nav">
           <button type="button" className="btn" onClick={() => openModal('structure')}>
             Settings
@@ -214,6 +229,9 @@ export function HubSlide({ onModalOpenChange }: HubSlideProps) {
           <button type="button" className="btn" onClick={() => openModal('share')}>
             Share
           </button>
+          <button type="button" className="btn" onClick={() => openModal('about')}>
+            About
+          </button>
         </nav>
         <p className="credits">
           Open source under MIT.{' '}
@@ -221,7 +239,6 @@ export function HubSlide({ onModalOpenChange }: HubSlideProps) {
             source
           </a>
         </p>
-        {note && <p className="import-status hub__note">{note}</p>}
       </div>
 
       <Modal title="Structure" open={modal === 'structure'} onClose={closeModal}>
@@ -267,7 +284,7 @@ export function HubSlide({ onModalOpenChange }: HubSlideProps) {
           <span className="field__label">Segments per hour</span>
           <select
             value={structure.segmentsPerHour}
-            onChange={(e) => setStructure({ segmentsPerHour: Number(e.target.value) })}
+            onChange={(e) => handleSegmentsPerHourChange(Number(e.target.value))}
           >
             {SEGMENT_OPTIONS.map((n) => (
               <option key={n} value={n}>
@@ -276,6 +293,15 @@ export function HubSlide({ onModalOpenChange }: HubSlideProps) {
             ))}
           </select>
         </label>
+        <button
+          type="button"
+          className="btn btn--ghost"
+          onClick={() =>
+            confirmReset('Clear all goals and completion? This cannot be undone.', resetContent)
+          }
+        >
+          Reset content
+        </button>
         <div className="modal__footer-inline">
           <button type="button" className="btn btn--ghost" onClick={() => openModal('design')}>
             Design settings →
@@ -452,15 +478,6 @@ export function HubSlide({ onModalOpenChange }: HubSlideProps) {
           <button type="button" className="btn" onClick={() => fileRef.current?.click()}>
             Import CSV
           </button>
-          <button
-            type="button"
-            className="btn btn--ghost"
-            onClick={() =>
-              confirmReset('Clear all goals and completion? This cannot be undone.', resetContent)
-            }
-          >
-            Reset content
-          </button>
         </div>
         <input
           ref={fileRef}
@@ -480,16 +497,31 @@ export function HubSlide({ onModalOpenChange }: HubSlideProps) {
         open={modal === 'share'}
         onClose={closeModal}
         footer={
-          <button type="button" className="btn" onClick={() => void handleShareGenerate()}>
-            Generate link
+          <button type="button" className="btn" onClick={() => void handleCopyLink()}>
+            Copy link
           </button>
         }
       >
         <p className="modal__hint">
-          Select what to encode in the link. The URL will look encrypted and does not show goal
-          text directly.
+          Select what to encode in the link. The URL is obfuscated and does not show goal text. In
+          WeChat, paste the full link if auto-detect truncates it.
         </p>
         <ShareSelectionFields value={shareSel} onChange={setShareSel} />
+        <ShareQrPreview selection={shareSel} profileName={profileName} />
+      </Modal>
+
+      <Modal title="About" open={modal === 'about'} onClose={closeModal}>
+        <article className="about-article">
+          {ABOUT_SECTIONS.map((section, index) => {
+            const Tag = `h${section.level}` as 'h1' | 'h2' | 'h3';
+            return (
+              <div key={index}>
+                <Tag>{section.title}</Tag>
+                <p>{section.body}</p>
+              </div>
+            );
+          })}
+        </article>
       </Modal>
     </section>
   );

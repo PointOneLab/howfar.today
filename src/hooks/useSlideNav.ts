@@ -29,6 +29,12 @@ export function useSlideNav(deckRef: RefObject<HTMLDivElement>): { goTo: (index:
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === ' ' || event.code === 'Space') {
+        if (!isEditingTarget(document.activeElement)) {
+          event.preventDefault();
+        }
+        return;
+      }
       if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
       if (isEditingTarget(document.activeElement)) return;
       const deck = deckRef.current;
