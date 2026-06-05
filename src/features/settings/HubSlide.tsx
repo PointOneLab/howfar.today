@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import type { DesignTokens } from '@/core/model/types';
+import type { DesignTokens, StructuralConfig } from '@/core/model/types';
 import {
   MAX_CHECK_SCALE_PCT,
   MAX_FOCUS_SCALE_PCT,
@@ -31,12 +31,12 @@ import {
   ShareSelectionFields,
 } from '@/components/ShareSelectionFields';
 import { ABOUT_SECTIONS } from '@/features/settings/aboutContent';
+import { buildSegments } from '@/core/engine/segments';
 import { selectConfig, useConfigStore } from '@/state/store';
 
-const SEGMENT_REDUCE_CONFIRM =
-  'Lowering segments per hour permanently removes goals and completion status in the extra slots ' +
-  '(for example, going from 4 segments to 1 keeps only the first segment of each hour). ' +
-  'This cannot be undone. Continue?';
+const STRUCTURE_CUT_CONFIRM =
+  'This change cuts off part of your existing schedule. Goals and completion status in removed slots ' +
+  'will be permanently deleted. This cannot be undone. All other data will remain. Continue?';
 
 const COLOR_FIELDS: { key: keyof DesignTokens; label: string }[] = [
   { key: 'bgApp', label: 'Background' },
@@ -60,6 +60,19 @@ interface HubSlideProps {
   onModalOpenChange: (open: boolean) => void;
 }
 
+function slotKey(clockHour: number, subIndex: number): string {
+  return `${clockHour}:${subIndex}`;
+}
+
+function structureCutsSlots(current: StructuralConfig, next: StructuralConfig): boolean {
+  const nextSlots = new Set(
+    buildSegments(next).map((segment) => slotKey(segment.clockHour, segment.subIndex)),
+  );
+  return buildSegments(current).some(
+    (segment) => !nextSlots.has(slotKey(segment.clockHour, segment.subIndex)),
+  );
+}
+
 export function HubSlide({ onModalOpenChange }: HubSlideProps) {
   const [modal, setModal] = useState<HubModal>(null);
   const [shareSel, setShareSel] = useState<ShareSelection>({ ...EMPTY_SHARE_SELECTION });
@@ -75,7 +88,6 @@ export function HubSlide({ onModalOpenChange }: HubSlideProps) {
     status: true,
     design: true,
   });
-  const pendingImport = useRef<{ text: string; detected: ShareSelection } | null>(null);
 
   const structure = useConfigStore((s) => s.structure);
   const tokens = useConfigStore((s) => s.tokens);
@@ -131,9 +143,13 @@ export function HubSlide({ onModalOpenChange }: HubSlideProps) {
   });
 
   const handleSegmentsPerHourChange = (next: number) => {
-    const prev = structure.segmentsPerHour;
-    if (next < prev && !window.confirm(SEGMENT_REDUCE_CONFIRM)) return;
-    setStructure({ segmentsPerHour: next });
+    applyStructurePatch({ segmentsPerHour: next });
+  };
+
+  const applyStructurePatch = (patch: Partial<StructuralConfig>) => {
+    const candidate: StructuralConfig = { ...structure, ...patch };
+    if (structureCutsSlots(structure, candidate) && !window.confirm(STRUCTURE_CUT_CONFIRM)) return;
+    setStructure(patch);
   };
 
   const handleCopyLink = async () => {
@@ -187,33 +203,40 @@ export function HubSlide({ onModalOpenChange }: HubSlideProps) {
   const handleImportFile = async (file: File) => {
     try {
       const text = await file.text();
-      const { detected } = importConfigFromCsv(
-        text,
-        selectConfig(useConfigStore.getState()),
-        csvImportSel,
+      const base = selectConfig(useConfigStore.getState());
+      const { detected } = importConfigFromCsv(text, base, {
+        structure: true,
+        goals: true,
+        status: true,
+        design: true,
+      });
+      const importSel: ShareSelection = {
+        structure: csvImportSel.structure && detected.structure,
+        goals: csvImportSel.goals && detected.goals,
+        status: csvImportSel.status && detected.status,
+        design: csvImportSel.design && detected.design,
+      };
+      const hasAny = importSel.structure || importSel.goals || importSel.status || importSel.design;
+      if (!hasAny) {
+        window.alert('This CSV has no matching sections for your current import selection.');
+        return;
+      }
+      if (
+        !window.confirm(
+          'Import selected data from this CSV now? This will replace matching saved data on this device. ' +
+            'This cannot be undone. Continue?',
+        )
+      ) {
+        return;
+      }
+      const { config, warnings } = importConfigFromCsv(text, base, importSel);
+      replaceConfig(config);
+      window.alert(
+        warnings.length ? `Imported with ${warnings.length} warning(s).` : 'Imported successfully.',
       );
-      pendingImport.current = { text, detected };
-      setCsvImportSel(detected);
-      openModal('data');
-      window.alert('Choose what to import, then tap Confirm import.');
     } catch {
       window.alert('Could not read that file.');
     }
-  };
-
-  const applyCsvImport = () => {
-    const pending = pendingImport.current;
-    if (!pending) return;
-    const { config, warnings } = importConfigFromCsv(
-      pending.text,
-      selectConfig(useConfigStore.getState()),
-      csvImportSel,
-    );
-    replaceConfig(config);
-    pendingImport.current = null;
-    window.alert(
-      warnings.length ? `Imported with ${warnings.length} warning(s).` : 'Imported successfully.',
-    );
   };
 
   return (
@@ -259,7 +282,7 @@ export function HubSlide({ onModalOpenChange }: HubSlideProps) {
           <span className="field__label">Start hour</span>
           <select
             value={structure.startHour}
-            onChange={(e) => setStructure({ startHour: Number(e.target.value) })}
+            onChange={(e) => applyStructurePatch({ startHour: Number(e.target.value) })}
           >
             {HOURS.map((h) => (
               <option key={h} value={h}>
@@ -272,7 +295,7 @@ export function HubSlide({ onModalOpenChange }: HubSlideProps) {
           <span className="field__label">End hour</span>
           <select
             value={structure.endHour}
-            onChange={(e) => setStructure({ endHour: Number(e.target.value) })}
+            onChange={(e) => applyStructurePatch({ endHour: Number(e.target.value) })}
           >
             {HOURS.slice(1)
               .concat(24)
@@ -460,19 +483,18 @@ export function HubSlide({ onModalOpenChange }: HubSlideProps) {
         title="Data"
         open={modal === 'data'}
         onClose={closeModal}
-        footer={
-          pendingImport.current ? (
-            <button type="button" className="btn" onClick={applyCsvImport}>
-              Confirm import
-            </button>
-          ) : undefined
-        }
       >
-        <p className="modal__hint">Choose what to include when exporting or importing.</p>
+        <p className="modal__hint">Choose what to include when exporting.</p>
         <ShareSelectionFields
-          idPrefix="csv"
-          value={pendingImport.current ? csvImportSel : csvExportSel}
-          onChange={pendingImport.current ? setCsvImportSel : setCsvExportSel}
+          idPrefix="csv-export"
+          value={csvExportSel}
+          onChange={setCsvExportSel}
+        />
+        <p className="modal__hint">Choose what to include when importing.</p>
+        <ShareSelectionFields
+          idPrefix="csv-import"
+          value={csvImportSel}
+          onChange={setCsvImportSel}
         />
         <div className="actions">
           <button type="button" className="btn" onClick={handleExport}>
