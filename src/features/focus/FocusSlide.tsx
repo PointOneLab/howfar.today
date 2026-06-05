@@ -25,24 +25,26 @@ export function FocusSlide({ view, onToggleComplete }: FocusSlideProps) {
   }
 
   const fillWidth = view.activeProgress * 100;
-  const fillModifier = active.state === 'completed' ? ' focus__fill--completed' : '';
   const goalText = active.goal.trim();
+  const goalStatusClass = goalText
+    ? active.state === 'completed'
+      ? ' focus__goal--completed'
+      : active.state === 'failed'
+        ? ' focus__goal--failed'
+        : ''
+    : '';
   const remaining = activeRemainingSeconds(view);
 
   return (
     <section className="slide focus" aria-label="Focus">
-      <div
-        className={`focus__fill${fillModifier}`}
-        style={{ width: `${fillWidth}%` }}
-        aria-hidden="true"
-      />
+      <div className="focus__fill" style={{ width: `${fillWidth}%` }} aria-hidden="true" />
       <div className="slide__mask" aria-hidden="true" />
       <div className="focus__content">
         <div className="focus__meta">
           {remaining !== null ? formatCountdown(remaining) : ''}
         </div>
 
-        <div className={`focus__goal${goalText ? '' : ' focus__goal--empty'}`}>
+        <div className={`focus__goal${goalText ? '' : ' focus__goal--empty'}${goalStatusClass}`}>
           {goalText || 'No goal'}
         </div>
 

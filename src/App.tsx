@@ -33,6 +33,7 @@ export default function App() {
   const setCompleted = useConfigStore((s) => s.setCompleted);
 
   const deckRef = useRef<HTMLDivElement>(null);
+  const currentSlideRef = useRef(LANDING_SLIDE);
   const [modalOpen, setModalOpen] = useState(false);
 
   useSlideNav(deckRef);
@@ -46,6 +47,48 @@ export default function App() {
     deck.style.scrollBehavior = 'auto';
     deck.scrollTop = LANDING_SLIDE * deck.clientHeight;
     deck.style.scrollBehavior = prev;
+    currentSlideRef.current = LANDING_SLIDE;
+  }, []);
+
+  useEffect(() => {
+    const deck = deckRef.current;
+    if (!deck) return;
+
+    let scrollFrame = 0;
+    let resizeFrame = 0;
+
+    const updateCurrentSlide = () => {
+      scrollFrame = 0;
+      const height = deck.clientHeight || 1;
+      const maxIndex = Math.max(0, deck.children.length - 1);
+      currentSlideRef.current = Math.min(maxIndex, Math.max(0, Math.round(deck.scrollTop / height)));
+    };
+
+    const restoreSlidePosition = () => {
+      resizeFrame = 0;
+      const prevBehavior = deck.style.scrollBehavior;
+      deck.style.scrollBehavior = 'auto';
+      deck.scrollTop = currentSlideRef.current * deck.clientHeight;
+      deck.style.scrollBehavior = prevBehavior;
+    };
+
+    updateCurrentSlide();
+    const onScroll = () => {
+      if (scrollFrame === 0) scrollFrame = window.requestAnimationFrame(updateCurrentSlide);
+    };
+    const onResize = () => {
+      if (resizeFrame) window.cancelAnimationFrame(resizeFrame);
+      resizeFrame = window.requestAnimationFrame(restoreSlidePosition);
+    };
+
+    deck.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onResize);
+    return () => {
+      if (scrollFrame) window.cancelAnimationFrame(scrollFrame);
+      if (resizeFrame) window.cancelAnimationFrame(resizeFrame);
+      deck.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onResize);
+    };
   }, []);
 
   useEffect(() => {
@@ -81,6 +124,7 @@ export default function App() {
     focusGoalScalePct,
     focusMetaScalePct,
     focusCheckScalePct,
+    motionEasing,
   ]);
 
   useEffect(() => {
