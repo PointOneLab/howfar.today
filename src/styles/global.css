@@ -199,6 +199,8 @@ button {
   height: calc(12vh * var(--focus-check-scale));
   font-size: calc(5vh * var(--focus-check-scale));
   color: var(--color-interact);
+  background: rgba(255, 255, 255, 0.08);
+  border: var(--stroke-grid) solid rgba(255, 255, 255, 0.12);
   cursor: pointer;
 }
 
@@ -315,6 +317,7 @@ button {
     var(--font-scale-goal) * var(--check-scale) * 0.8 * (100vh / var(--rows, 17))
   );
   color: var(--color-interact);
+  background: rgba(255, 255, 255, 0.08);
   cursor: pointer;
 }
 

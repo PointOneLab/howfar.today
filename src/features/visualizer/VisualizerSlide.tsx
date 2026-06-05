@@ -76,11 +76,18 @@ export function VisualizerSlide({ view, onToggleComplete }: VisualizerSlideProps
           {row.map((segment) => {
             const sv = viewByIndex.get(segment.index);
             if (!sv) return null;
-            const fillWidth = sv.isActive
-              ? view.activeProgress * 100
-              : sv.state === 'future'
+            const fillWidth =
+              view.phase === 'before'
                 ? 0
-                : 100;
+                : view.phase === 'after'
+                  ? 100
+                  : view.activeIndex === null
+                    ? 0
+                    : segment.index < view.activeIndex
+                      ? 100
+                      : segment.index > view.activeIndex
+                        ? 0
+                        : view.activeProgress * 100;
             const hasGoal = sv.goal.trim().length > 0;
             const inputStateClass =
               sv.state === 'completed'

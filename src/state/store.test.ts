@@ -102,4 +102,17 @@ describe('store — structure pruning', () => {
     state = useConfigStore.getState();
     expect(state.routines.default.goals[minuteOf(9, 0)]).toBeUndefined();
   });
+
+  it('clearing a goal also clears completion for that slot', () => {
+    const store = useConfigStore.getState();
+    const minute = minuteOf(10, 0);
+    store.setGoal(minute, 'ship');
+    store.setCompleted(minute, true, '2026-06-05');
+    expect(useConfigStore.getState().completion.completed).toContain(minute);
+
+    store.setGoal(minute, '');
+    const state = useConfigStore.getState();
+    expect(state.routines.default.goals[minute]).toBeUndefined();
+    expect(state.completion.completed).not.toContain(minute);
+  });
 });
