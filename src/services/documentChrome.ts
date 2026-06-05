@@ -63,6 +63,40 @@ export function svgToDataUrl(svg: string): string {
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 }
 
+/** Renders a PNG favicon data URL for browsers that skip dynamic SVG icons. */
+export function buildFaviconPngDataUrl(view: DayView, tokens: DesignTokens): string | null {
+  const canvas = document.createElement('canvas');
+  canvas.width = 64;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  const state: SegmentState | 'none' = view.active ? view.active.state : 'none';
+  const fillColor = stateColor(state, tokens);
+  const progress = view.active ? view.activeProgress : view.phase === 'after' ? 1 : 0;
+  const width = Math.round(progress * canvas.width);
+
+  ctx.fillStyle = tokens.bgApp;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  if (width > 0) {
+    ctx.fillStyle = fillColor;
+    ctx.fillRect(0, 0, width, canvas.height);
+  }
+
+  return canvas.toDataURL('image/png');
+}
+
+function upsertFaviconLink(id: string, rel: string): HTMLLinkElement {
+  let link = document.getElementById(id) as HTMLLinkElement | null;
+  if (!link) {
+    link = document.createElement('link');
+    link.id = id;
+    link.rel = rel;
+    document.head.appendChild(link);
+  }
+  return link;
+}
+
 let lastFaviconKey = '';
 
 /** Applies the title and favicon to the document head (favicon throttled when tab hidden). */
@@ -73,16 +107,21 @@ export function applyDocumentChrome(view: DayView, tokens: DesignTokens): void {
 
   const progress = view.active ? view.activeProgress : view.phase === 'after' ? 1 : 0;
   const state = view.active ? view.active.state : 'none';
-  const key = `${state}:${Math.round(progress * 20)}:${tokens.bgApp}`;
+  const fillColor = stateColor(state, tokens);
+  const key = `${state}:${Math.round(progress * 20)}:${tokens.bgApp}:${fillColor}`;
   if (key === lastFaviconKey) return;
   lastFaviconKey = key;
 
-  const href = svgToDataUrl(buildFaviconSvg(view, tokens));
-  let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-  if (!link) {
-    link = document.createElement('link');
-    link.rel = 'icon';
-    document.head.appendChild(link);
+  const svgHref = svgToDataUrl(buildFaviconSvg(view, tokens));
+  const svgLink = upsertFaviconLink('dynamic-favicon-svg', 'icon');
+  svgLink.type = 'image/svg+xml';
+  svgLink.href = svgHref;
+
+  const pngHref = buildFaviconPngDataUrl(view, tokens);
+  if (pngHref) {
+    const pngLink = upsertFaviconLink('dynamic-favicon-png', 'shortcut icon');
+    pngLink.type = 'image/png';
+    pngLink.sizes = '64x64';
+    pngLink.href = pngHref;
   }
-  link.href = href;
 }

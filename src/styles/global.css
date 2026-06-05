@@ -146,14 +146,6 @@ button {
   z-index: 0;
 }
 
-.focus__fill--completed {
-  background: var(--color-success);
-}
-
-.focus__fill--failed {
-  background: var(--color-failure);
-}
-
 .focus__content {
   position: relative;
   z-index: 1;
@@ -180,7 +172,7 @@ button {
   text-align: center;
   width: 100%;
   font-size: calc(clamp(4vh, 9vh, 14vw) * var(--focus-goal-scale));
-  font-weight: 600;
+  font-weight: 400;
   line-height: 1.1;
   color: var(--color-highlight);
   word-break: break-word;
@@ -189,6 +181,14 @@ button {
 .focus__goal--empty {
   color: var(--color-secondary);
   font-weight: 400;
+}
+
+.focus__goal--completed {
+  color: var(--color-success);
+}
+
+.focus__goal--failed {
+  color: var(--color-failure);
 }
 
 .focus__status {
@@ -225,15 +225,15 @@ button {
   display: flex;
   flex-direction: column;
   background: var(--bg-app);
-  border-left: var(--stroke-grid) solid var(--color-grid);
-  border-right: var(--stroke-grid) solid var(--color-grid);
-  border-bottom: var(--stroke-grid) solid var(--color-grid);
 }
 
 .hour-row {
   display: flex;
   flex: 1 1 0;
   min-height: 0;
+}
+
+.hour-row + .hour-row {
   border-top: var(--stroke-grid) solid var(--color-grid);
 }
 
@@ -258,22 +258,7 @@ button {
   inset: 0 auto 0 0;
   height: 100%;
   z-index: 0;
-}
-
-.segment--active .segment__fill {
   background: var(--color-progress);
-}
-
-.segment--past .segment__fill {
-  background: var(--color-progress);
-}
-
-.segment--failed .segment__fill {
-  background: var(--color-failure);
-}
-
-.segment--completed .segment__fill {
-  background: var(--color-success);
 }
 
 .segment__body {
@@ -306,9 +291,17 @@ button {
   white-space: nowrap;
 }
 
-.segment__input:focus,
-.segment--active .segment__input {
+.segment__input:focus:not(.segment__input--completed):not(.segment__input--failed),
+.segment--active .segment__input:not(.segment__input--completed):not(.segment__input--failed) {
   color: var(--color-highlight);
+}
+
+.segment__input--completed {
+  color: var(--color-success);
+}
+
+.segment__input--failed {
+  color: var(--color-failure);
 }
 
 .segment__check {

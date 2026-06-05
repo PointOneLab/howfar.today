@@ -82,6 +82,12 @@ export function VisualizerSlide({ view, onToggleComplete }: VisualizerSlideProps
                 ? 0
                 : 100;
             const hasGoal = sv.goal.trim().length > 0;
+            const inputStateClass =
+              sv.state === 'completed'
+                ? ' segment__input--completed'
+                : sv.state === 'failed'
+                  ? ' segment__input--failed'
+                  : '';
 
             return (
               <div className={`segment segment--${sv.state}`} key={segment.index}>
@@ -93,7 +99,7 @@ export function VisualizerSlide({ view, onToggleComplete }: VisualizerSlideProps
                 <div className="segment__body">
                   <span className="segment__time">{segment.label}</span>
                   <input
-                    className="segment__input"
+                    className={`segment__input${inputStateClass}`}
                     type="text"
                     value={sv.goal}
                     aria-label={`Goal for ${segment.startLabel}`}
