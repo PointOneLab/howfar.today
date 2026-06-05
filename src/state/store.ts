@@ -54,17 +54,43 @@ interface ConfigActions {
   resetDesign: () => void;
 }
 
-function pruneToStructure(
-  structure: StructuralConfig,
+function segmentSlotKey(clockHour: number, subIndex: number): string {
+  return `${clockHour}:${subIndex}`;
+}
+
+function remapToStructure(
+  prevStructure: StructuralConfig,
+  nextStructure: StructuralConfig,
   goals: Record<number, string>,
   completed: number[],
 ): { goals: Record<number, string>; completed: number[] } {
-  const valid = new Set(buildSegments(structure).map((s) => s.minuteOfDay));
+  const prevSegments = buildSegments(prevStructure);
+  const nextSegments = buildSegments(nextStructure);
+  const prevByMinute = new Map(prevSegments.map((segment) => [segment.minuteOfDay, segment] as const));
+  const nextMinuteBySlot = new Map(
+    nextSegments.map((segment) => [segmentSlotKey(segment.clockHour, segment.subIndex), segment.minuteOfDay] as const),
+  );
+
   const nextGoals: Record<number, string> = {};
   for (const [key, value] of Object.entries(goals)) {
-    if (valid.has(Number(key))) nextGoals[Number(key)] = value;
+    const oldMinute = Number(key);
+    const oldSegment = prevByMinute.get(oldMinute);
+    if (!oldSegment) continue;
+    const nextMinute = nextMinuteBySlot.get(segmentSlotKey(oldSegment.clockHour, oldSegment.subIndex));
+    if (nextMinute === undefined) continue;
+    nextGoals[nextMinute] = value;
   }
-  return { goals: nextGoals, completed: completed.filter((m) => valid.has(m)) };
+
+  const nextCompletedSet = new Set<number>();
+  for (const oldMinute of completed) {
+    const oldSegment = prevByMinute.get(oldMinute);
+    if (!oldSegment) continue;
+    const nextMinute = nextMinuteBySlot.get(segmentSlotKey(oldSegment.clockHour, oldSegment.subIndex));
+    if (nextMinute === undefined) continue;
+    nextCompletedSet.add(nextMinute);
+  }
+
+  return { goals: nextGoals, completed: [...nextCompletedSet].sort((a, b) => a - b) };
 }
 
 export type ConfigStore = AppConfig & ConfigActions;
@@ -75,7 +101,8 @@ export const useConfigStore = create<ConfigStore>((set) => ({
   setStructure: (patch) =>
     set((state) => {
       const structure = sanitizeStructurePatch(state.structure, patch);
-      const pruned = pruneToStructure(
+      const pruned = remapToStructure(
+        state.structure,
         structure,
         state.routines.default.goals,
         state.completion.completed,

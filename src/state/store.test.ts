@@ -28,6 +28,32 @@ describe('store — structure pruning', () => {
     expect(goals[minuteOf(7, 0)]).toBe('kept');
   });
 
+  it('preserves slot-ordinal goals/completion when segments per hour changes', () => {
+    const store = useConfigStore.getState();
+    store.setStructure({ startHour: 7, endHour: 24, segmentsPerHour: 6 });
+    store.setGoal(minuteOf(7, 10), 'second slot');
+    store.setGoal(minuteOf(7, 50), 'sixth slot');
+    store.setCompleted(minuteOf(7, 10), true, '2026-06-05');
+    store.setCompleted(minuteOf(7, 50), true, '2026-06-05');
+
+    // 6/hour -> 5/hour: slot #2 survives (moved to :12), slot #6 is dropped.
+    store.setStructure({ segmentsPerHour: 5 });
+    let state = useConfigStore.getState();
+    expect(state.routines.default.goals[minuteOf(7, 12)]).toBe('second slot');
+    expect(state.routines.default.goals[minuteOf(7, 10)]).toBeUndefined();
+    expect(state.routines.default.goals[minuteOf(7, 50)]).toBeUndefined();
+    expect(state.completion.completed).toContain(minuteOf(7, 12));
+    expect(state.completion.completed).not.toContain(minuteOf(7, 50));
+
+    // Widening again restores surviving slots to their matching 6/hour positions.
+    store.setStructure({ segmentsPerHour: 6 });
+    state = useConfigStore.getState();
+    expect(state.routines.default.goals[minuteOf(7, 10)]).toBe('second slot');
+    expect(state.routines.default.goals[minuteOf(7, 50)]).toBeUndefined();
+    expect(state.completion.completed).toContain(minuteOf(7, 10));
+    expect(state.completion.completed).not.toContain(minuteOf(7, 50));
+  });
+
   it('prunes goals that fall outside a narrowed hour window', () => {
     const store = useConfigStore.getState();
     store.setStructure({ startHour: 7, endHour: 24, segmentsPerHour: 1 });
