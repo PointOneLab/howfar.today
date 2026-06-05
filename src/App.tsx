@@ -14,6 +14,12 @@ import { applyIncomingShareHash, HubSlide } from '@/features/settings/HubSlide';
 
 const LANDING_SLIDE = 1;
 
+function isEditableTarget(el: Element | null): el is HTMLElement {
+  if (!(el instanceof HTMLElement)) return false;
+  const tag = el.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable;
+}
+
 export default function App() {
   const now = useClock(1000);
   useWindowSync(now);
@@ -61,7 +67,15 @@ export default function App() {
       scrollFrame = 0;
       const height = deck.clientHeight || 1;
       const maxIndex = Math.max(0, deck.children.length - 1);
-      currentSlideRef.current = Math.min(maxIndex, Math.max(0, Math.round(deck.scrollTop / height)));
+      const slideIndex = Math.min(maxIndex, Math.max(0, Math.round(deck.scrollTop / height)));
+      currentSlideRef.current = slideIndex;
+
+      // If a visualizer input stays focused while leaving the slide, browsers may
+      // auto-scroll back to keep the caret visible on active-segment updates.
+      const activeEl = document.activeElement;
+      if (slideIndex !== LANDING_SLIDE && isEditableTarget(activeEl) && activeEl.closest('.visualizer')) {
+        activeEl.blur();
+      }
     };
 
     const restoreSlidePosition = () => {
