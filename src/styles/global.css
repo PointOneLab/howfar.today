@@ -206,6 +206,11 @@ button {
   color: var(--color-highlight);
 }
 
+.focus__status--hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .focus__idle {
   flex: 1;
   display: flex;

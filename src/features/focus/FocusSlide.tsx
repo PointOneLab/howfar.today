@@ -48,17 +48,18 @@ export function FocusSlide({ view, onToggleComplete }: FocusSlideProps) {
           {goalText || 'Set a goal, and complete the goal.'}
         </div>
 
-        {goalText ? (
-          <button
-            type="button"
-            className={`focus__status${active.isCompleted ? ' focus__status--done' : ''}`}
-            onClick={() => onToggleComplete(active.segment.minuteOfDay, active.isCompleted)}
-            aria-pressed={active.isCompleted}
-            title={active.isCompleted ? 'Revert completion' : 'Mark completed'}
-          >
-            <MaterialIcon name={active.isCompleted ? 'undo' : 'check'} />
-          </button>
-        ) : null}
+        <button
+          type="button"
+          className={`focus__status${goalText ? '' : ' focus__status--hidden'}`}
+          onClick={() => onToggleComplete(active.segment.minuteOfDay, active.isCompleted)}
+          aria-pressed={active.isCompleted}
+          title={active.isCompleted ? 'Revert completion' : 'Mark completed'}
+          disabled={!goalText}
+          aria-hidden={!goalText}
+          tabIndex={goalText ? 0 : -1}
+        >
+          <MaterialIcon name={active.isCompleted ? 'undo' : 'check'} />
+        </button>
       </div>
     </section>
   );
