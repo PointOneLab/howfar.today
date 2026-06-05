@@ -1,6 +1,5 @@
 import type { DesignTokens } from '@/core/model/types';
 
-/** Maps each design token to its CSS custom property name. */
 const CSS_VAR: Record<keyof DesignTokens, string> = {
   bgApp: '--bg-app',
   colorRegular: '--color-regular',
@@ -16,18 +15,15 @@ const CSS_VAR: Record<keyof DesignTokens, string> = {
 };
 
 export interface LayoutScales {
-  /** Goal-text height as a percentage of segment height. */
   fontScalePct: number;
-  /** Time-indicator height as a percentage of segment height. */
   timeScalePct: number;
-  /** Horizontal gap/padding inside a segment, in vw. */
-  segmentGap: number;
+  segmentGapRatio: number;
+  checkScalePct: number;
+  focusGoalScalePct: number;
+  focusMetaScalePct: number;
+  focusCheckScalePct: number;
 }
 
-/**
- * Pushes design tokens and layout scales onto the document root as CSS custom
- * properties, enabling live, runtime theming from the settings panel.
- */
 export function applyTokens(tokens: DesignTokens, scales: LayoutScales): void {
   const root = document.documentElement;
   (Object.keys(CSS_VAR) as (keyof DesignTokens)[]).forEach((key) => {
@@ -37,5 +33,10 @@ export function applyTokens(tokens: DesignTokens, scales: LayoutScales): void {
   });
   root.style.setProperty('--font-scale-goal', String(scales.fontScalePct / 100));
   root.style.setProperty('--font-scale-time', String(scales.timeScalePct / 100));
-  root.style.setProperty('--segment-gap', `${scales.segmentGap}vw`);
+  const gapBase = (scales.fontScalePct / 100) * (scales.segmentGapRatio / 100);
+  root.style.setProperty('--segment-gap', `${gapBase}em`);
+  root.style.setProperty('--check-scale', String(scales.checkScalePct / 100));
+  root.style.setProperty('--focus-goal-scale', String(scales.focusGoalScalePct / 100));
+  root.style.setProperty('--focus-meta-scale', String(scales.focusMetaScalePct / 100));
+  root.style.setProperty('--focus-check-scale', String(scales.focusCheckScalePct / 100));
 }

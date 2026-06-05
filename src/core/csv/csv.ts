@@ -1,9 +1,9 @@
 import type { AppConfig, DesignTokens } from '../model/types';
 import { sanitizeConfig } from '../model/validate';
-import { createDefaultConfig } from '../model/defaults';
 import { formatClock, pad2 } from '../engine/time';
+import type { ShareSelection } from '../share/payload';
+import { selectionToTags, tagsToLabel } from '../share/payload';
 
-/** Escapes a single CSV field per RFC 4180 (quotes when needed). */
 function escapeField(value: string): string {
   if (/[",\n\r]/.test(value)) {
     return `"${value.replace(/"/g, '""')}"`;
@@ -15,7 +15,6 @@ function toRow(cells: string[]): string {
   return cells.map((c) => escapeField(c)).join(',');
 }
 
-/** Minimal RFC-4180 line splitter that respects quoted fields. */
 function parseCsv(text: string): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
@@ -77,54 +76,94 @@ const TOKEN_KEYS: (keyof DesignTokens)[] = [
   'strokeGrid',
 ];
 
-/**
- * Serializes all system parameters, design tokens, and daily goals into a flat,
- * spreadsheet-friendly CSV. Goals are keyed by their "HH:MM" start label so the
- * agenda is easy to edit in Google Sheets or Excel and re-import.
- */
-export function exportConfigToCsv(config: AppConfig): string {
+const CLOCK_RE = /^(\d{1,2}):(\d{2})$/;
+
+export type CsvSelection = ShareSelection;
+
+export function exportConfigToCsv(config: AppConfig, sel: CsvSelection): string {
   const lines: string[] = [toRow(['section', 'key', 'value'])];
+  const tags = selectionToTags(sel);
+  lines.push(toRow(['meta', 'exportTags', tagsToLabel(tags)]));
+  lines.push(toRow(['meta', 'profileName', config.profileName]));
+  lines.push(toRow(['meta', 'exportedAt', new Date().toISOString()]));
+  lines.push(toRow(['meta', 'timezone', Intl.DateTimeFormat().resolvedOptions().timeZone]));
 
-  lines.push(toRow(['config', 'startHour', String(config.structure.startHour)]));
-  lines.push(toRow(['config', 'endHour', String(config.structure.endHour)]));
-  lines.push(toRow(['config', 'segmentsPerHour', String(config.structure.segmentsPerHour)]));
-  lines.push(toRow(['config', 'fontScalePct', String(config.fontScalePct)]));
-  lines.push(toRow(['config', 'timeScalePct', String(config.timeScalePct)]));
-  lines.push(toRow(['config', 'segmentGap', String(config.segmentGap)]));
-  lines.push(toRow(['config', 'statusColoring', String(config.behavior.statusColoring)]));
-
-  for (const key of TOKEN_KEYS) {
-    lines.push(toRow(['token', key, String(config.tokens[key])]));
+  if (sel.structure) {
+    lines.push(toRow(['config', 'startHour', String(config.structure.startHour)]));
+    lines.push(toRow(['config', 'endHour', String(config.structure.endHour)]));
+    lines.push(toRow(['config', 'segmentsPerHour', String(config.structure.segmentsPerHour)]));
   }
 
-  const entries = Object.entries(config.routines.default.goals)
-    .map(([k, v]) => [Number(k), v] as const)
-    .sort((a, b) => a[0] - b[0]);
-  for (const [minuteOfDay, goal] of entries) {
-    lines.push(toRow(['goal', formatClock(minuteOfDay), goal]));
+  if (sel.design) {
+    lines.push(toRow(['config', 'fontScalePct', String(config.fontScalePct)]));
+    lines.push(toRow(['config', 'timeScalePct', String(config.timeScalePct)]));
+    lines.push(toRow(['config', 'segmentGapRatio', String(config.segmentGapRatio)]));
+    lines.push(toRow(['config', 'checkScalePct', String(config.checkScalePct)]));
+    lines.push(toRow(['config', 'focusGoalScalePct', String(config.focusGoalScalePct)]));
+    lines.push(toRow(['config', 'focusMetaScalePct', String(config.focusMetaScalePct)]));
+    lines.push(toRow(['config', 'focusCheckScalePct', String(config.focusCheckScalePct)]));
+    lines.push(toRow(['config', 'maskOpacityPct', String(config.maskOpacityPct)]));
+    lines.push(toRow(['config', 'motionEasing', config.motionEasing]));
+    lines.push(toRow(['config', 'statusColoring', String(config.behavior.statusColoring)]));
+    for (const key of TOKEN_KEYS) {
+      lines.push(toRow(['token', key, String(config.tokens[key])]));
+    }
+  }
+
+  if (sel.goals) {
+    const entries = Object.entries(config.routines.default.goals)
+      .map(([k, v]) => [Number(k), v] as const)
+      .sort((a, b) => a[0] - b[0]);
+    for (const [minuteOfDay, goal] of entries) {
+      lines.push(toRow(['goal', formatClock(minuteOfDay), goal]));
+    }
+  }
+
+  if (sel.status) {
+    lines.push(toRow(['completion', 'windowDate', config.completion.windowDate]));
+    for (const minute of config.completion.completed) {
+      lines.push(toRow(['completion', formatClock(minute), '1']));
+    }
   }
 
   return lines.join('\r\n') + '\r\n';
 }
 
-/** Result of a CSV import attempt. */
 export interface CsvImportResult {
   config: AppConfig;
   warnings: string[];
+  detected: CsvSelection;
 }
 
-const CLOCK_RE = /^(\d{1,2}):(\d{2})$/;
+export function detectCsvSections(rows: string[][]): CsvSelection {
+  const detected: CsvSelection = {
+    structure: false,
+    goals: false,
+    status: false,
+    design: false,
+  };
+  for (const row of rows) {
+    const section = (row[0] ?? '').trim().toLowerCase();
+    if (section === 'config' || section === 'token') detected.design = true;
+    if (section === 'goal') detected.goals = true;
+    if (section === 'completion') detected.status = true;
+    const key = (row[1] ?? '').trim();
+    if (section === 'config' && ['starthour', 'endhour', 'segmentsperhour'].includes(key.toLowerCase())) {
+      detected.structure = true;
+    }
+  }
+  return detected;
+}
 
-/**
- * Parses a CSV produced by {@link exportConfigToCsv} (or hand-edited to the
- * same shape) into a validated configuration. Existing goals are preserved as a
- * base; the import overlays its values. All values pass through
- * {@link sanitizeConfig} so malformed input can never break the application.
- */
-export function importConfigFromCsv(text: string, base?: AppConfig): CsvImportResult {
+export function importConfigFromCsv(
+  text: string,
+  base: AppConfig,
+  importSel: CsvSelection,
+): CsvImportResult {
   const warnings: string[] = [];
   const rows = parseCsv(text);
-  const draft = structuredClone(base ?? createDefaultConfig());
+  const detected = detectCsvSections(rows);
+  const draft = structuredClone(base);
 
   for (const row of rows) {
     const [sectionRaw, keyRaw, valueRaw = ''] = row;
@@ -132,73 +171,122 @@ export function importConfigFromCsv(text: string, base?: AppConfig): CsvImportRe
     const key = (keyRaw ?? '').trim();
     const value = valueRaw.trim();
 
-    if (section === 'section' && key.toLowerCase() === 'key') continue; // header
+    if (section === 'section' && key.toLowerCase() === 'key') continue;
 
-    switch (section) {
-      case 'config': {
-        switch (key) {
-          case 'startHour':
-            draft.structure.startHour = Number(value);
-            break;
-          case 'endHour':
-            draft.structure.endHour = Number(value);
-            break;
-          case 'segmentsPerHour':
-            draft.structure.segmentsPerHour = Number(value);
-            break;
-          case 'fontScalePct':
-            draft.fontScalePct = Number(value);
-            break;
-          case 'timeScalePct':
-            draft.timeScalePct = Number(value);
-            break;
-          case 'segmentGap':
-            draft.segmentGap = Number(value);
-            break;
-          case 'statusColoring':
-            draft.behavior.statusColoring = /^(true|1|yes|on)$/i.test(value);
-            break;
-          default:
-            warnings.push(`Unknown config key "${key}" ignored.`);
-        }
-        break;
-      }
-      case 'token': {
-        if ((TOKEN_KEYS as string[]).includes(key)) {
-          if (key === 'strokeGrid') {
-            draft.tokens.strokeGrid = Number(value);
-          } else {
-            (draft.tokens as unknown as Record<string, string | number>)[key] = value;
-          }
-        } else {
-          warnings.push(`Unknown token "${key}" ignored.`);
-        }
-        break;
-      }
-      case 'goal': {
-        const match = CLOCK_RE.exec(key);
-        if (!match) {
-          warnings.push(`Invalid goal time "${key}" ignored.`);
+    if (section === 'meta') {
+      if (key === 'profileName' && importSel.goals) draft.profileName = value;
+      continue;
+    }
+
+    if (section === 'config') {
+      const isStructure = ['startHour', 'endHour', 'segmentsPerHour'].includes(key);
+      if (isStructure && !importSel.structure) continue;
+      if (!isStructure && !importSel.design) continue;
+
+      switch (key) {
+        case 'startHour':
+          draft.structure.startHour = Number(value);
           break;
-        }
+        case 'endHour':
+          draft.structure.endHour = Number(value);
+          break;
+        case 'segmentsPerHour':
+          draft.structure.segmentsPerHour = Number(value);
+          break;
+        case 'fontScalePct':
+          draft.fontScalePct = Number(value);
+          break;
+        case 'timeScalePct':
+          draft.timeScalePct = Number(value);
+          break;
+        case 'segmentGap':
+        case 'segmentGapRatio':
+          draft.segmentGapRatio = Number(value);
+          break;
+        case 'checkScalePct':
+          draft.checkScalePct = Number(value);
+          break;
+        case 'focusGoalScalePct':
+          draft.focusGoalScalePct = Number(value);
+          break;
+        case 'focusMetaScalePct':
+          draft.focusMetaScalePct = Number(value);
+          break;
+        case 'focusCheckScalePct':
+          draft.focusCheckScalePct = Number(value);
+          break;
+        case 'maskOpacityPct':
+          draft.maskOpacityPct = Number(value);
+          break;
+        case 'motionEasing':
+          draft.motionEasing = value;
+          break;
+        case 'statusColoring':
+          draft.behavior.statusColoring = /^(true|1|yes|on)$/i.test(value);
+          break;
+        default:
+          warnings.push(`Unknown config key "${key}" ignored.`);
+      }
+      continue;
+    }
+
+    if (section === 'token') {
+      if (!importSel.design) continue;
+      if ((TOKEN_KEYS as string[]).includes(key)) {
+        if (key === 'strokeGrid') draft.tokens.strokeGrid = Number(value);
+        else (draft.tokens as unknown as Record<string, string | number>)[key] = value;
+      } else {
+        warnings.push(`Unknown token "${key}" ignored.`);
+      }
+      continue;
+    }
+
+    if (section === 'goal') {
+      if (!importSel.goals) continue;
+      const match = CLOCK_RE.exec(key);
+      if (!match) {
+        warnings.push(`Invalid goal time "${key}" ignored.`);
+        continue;
+      }
+      const hh = Number(match[1]);
+      const mm = Number(match[2]);
+      if (hh > 23 || mm > 59) {
+        warnings.push(`Out-of-range goal time "${key}" ignored.`);
+        continue;
+      }
+      draft.routines.default.goals[hh * 60 + mm] = valueRaw.trim();
+      continue;
+    }
+
+    if (section === 'completion') {
+      if (!importSel.status) continue;
+      if (key === 'windowDate') {
+        draft.completion.windowDate = value;
+        continue;
+      }
+      const match = CLOCK_RE.exec(key);
+      if (match) {
         const hh = Number(match[1]);
         const mm = Number(match[2]);
-        if (hh > 23 || mm > 59) {
-          warnings.push(`Out-of-range goal time "${key}" ignored.`);
-          break;
+        const minute = hh * 60 + mm;
+        if (!draft.completion.completed.includes(minute)) {
+          draft.completion.completed.push(minute);
         }
-        draft.routines.default.goals[hh * 60 + mm] = valueRaw;
-        break;
       }
-      default:
-        if (section) warnings.push(`Unknown section "${section}" ignored.`);
+      continue;
     }
+
+    if (section) warnings.push(`Unknown section "${section}" ignored.`);
   }
 
-  return { config: sanitizeConfig(draft), warnings };
+  draft.completion.completed.sort((a, b) => a - b);
+  return { config: sanitizeConfig(draft), warnings, detected };
 }
 
-/** Suggests a date-stamped filename for an exported agenda. */
-export function csvFileName(now: Date = new Date()): string {
-  return `howfar-today-${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}.csv`;
+export function csvFileName(config: AppConfig, sel: CsvSelection, now: Date = new Date()): string {
+  const tags = tagsToLabel(selectionToTags(sel));
+  const profile = config.profileName.trim() || 'default';
+  const safeProfile = profile.replace(/[^a-zA-Z0-9_-]+/g, '-').slice(0, 24);
+  const date = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+  return `howfar-${safeProfile}-${date}-${tags}.csv`;
 }

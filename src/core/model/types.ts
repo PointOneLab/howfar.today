@@ -84,12 +84,28 @@ export interface AppConfig {
   version: number;
   structure: StructuralConfig;
   tokens: DesignTokens;
-  /** Goal-text height as a percentage of segment height. Range 25–75. */
+  /** Goal-text height as a percentage of segment height. */
   fontScalePct: number;
-  /** Time-indicator height as a percentage of segment height. Range 10–60. */
+  /** Time-indicator height as a percentage of segment height. */
   timeScalePct: number;
-  /** Horizontal gap/padding inside a segment, in vw. Range 0–3. */
+  /** Checkmark size relative to goal text (%). */
+  checkScalePct: number;
+  /** Focus goal text scale (% of default vh sizing). */
+  focusGoalScalePct: number;
+  /** Focus countdown meta scale (%). */
+  focusMetaScalePct: number;
+  /** Focus check control scale (%). */
+  focusCheckScalePct: number;
+  /** Legacy vw gap fallback; gap is primarily derived from goal text scale × ratio. */
   segmentGap: number;
+  /** Multiplier on text-derived horizontal gap. Range 0–200 (%). */
+  segmentGapRatio: number;
+  /** Peak swipe mask darkness, 0–100 (% of black overlay). */
+  maskOpacityPct: number;
+  /** Shared easing id for scroll feel and mask interpolation. */
+  motionEasing: string;
+  /** Short label for exports and share URLs (max 40 chars). */
+  profileName: string;
   behavior: BehaviorConfig;
   routines: RoutineSet;
   completion: CompletionState;

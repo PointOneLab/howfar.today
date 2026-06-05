@@ -1,14 +1,24 @@
 import type { AppConfig, BehaviorConfig, DesignTokens, Routine, StructuralConfig } from './types';
 import {
+  MAX_CHECK_SCALE_PCT,
+  MAX_FOCUS_SCALE_PCT,
   MAX_FONT_SCALE_PCT,
   MAX_GOAL_LENGTH,
+  MAX_MASK_OPACITY_PCT,
+  MAX_PROFILE_NAME_LENGTH,
   MAX_SEGMENT_GAP,
+  MAX_SEGMENT_GAP_RATIO,
   MAX_SEGMENTS_PER_HOUR,
   MAX_TIME_SCALE_PCT,
+  MIN_CHECK_SCALE_PCT,
+  MIN_FOCUS_SCALE_PCT,
   MIN_FONT_SCALE_PCT,
+  MIN_MASK_OPACITY_PCT,
   MIN_SEGMENT_GAP,
+  MIN_SEGMENT_GAP_RATIO,
   MIN_SEGMENTS_PER_HOUR,
   MIN_TIME_SCALE_PCT,
+  MOTION_EASING_OPTIONS,
   createDefaultConfig,
 } from './defaults';
 import { MINUTES_PER_DAY } from '../engine/time';
@@ -110,7 +120,46 @@ export function sanitizeConfig(input: unknown): AppConfig {
       MIN_TIME_SCALE_PCT,
       MAX_TIME_SCALE_PCT,
     ),
+    checkScalePct: clamp(
+      toInt(raw.checkScalePct, base.checkScalePct),
+      MIN_CHECK_SCALE_PCT,
+      MAX_CHECK_SCALE_PCT,
+    ),
+    focusGoalScalePct: clamp(
+      toInt(raw.focusGoalScalePct, base.focusGoalScalePct),
+      MIN_FOCUS_SCALE_PCT,
+      MAX_FOCUS_SCALE_PCT,
+    ),
+    focusMetaScalePct: clamp(
+      toInt(raw.focusMetaScalePct, base.focusMetaScalePct),
+      MIN_FOCUS_SCALE_PCT,
+      MAX_FOCUS_SCALE_PCT,
+    ),
+    focusCheckScalePct: clamp(
+      toInt(raw.focusCheckScalePct, base.focusCheckScalePct),
+      MIN_FOCUS_SCALE_PCT,
+      MAX_FOCUS_SCALE_PCT,
+    ),
     segmentGap: clamp(toNum(raw.segmentGap, base.segmentGap), MIN_SEGMENT_GAP, MAX_SEGMENT_GAP),
+    segmentGapRatio: clamp(
+      toInt(raw.segmentGapRatio, base.segmentGapRatio),
+      MIN_SEGMENT_GAP_RATIO,
+      MAX_SEGMENT_GAP_RATIO,
+    ),
+    maskOpacityPct: clamp(
+      toInt(raw.maskOpacityPct, base.maskOpacityPct),
+      MIN_MASK_OPACITY_PCT,
+      MAX_MASK_OPACITY_PCT,
+    ),
+    motionEasing:
+      typeof raw.motionEasing === 'string' &&
+      (MOTION_EASING_OPTIONS as readonly string[]).includes(raw.motionEasing)
+        ? raw.motionEasing
+        : base.motionEasing,
+    profileName:
+      typeof raw.profileName === 'string'
+        ? raw.profileName.trim().slice(0, MAX_PROFILE_NAME_LENGTH)
+        : base.profileName,
     behavior: sanitizeBehavior(raw.behavior),
     routines: { default: sanitizeRoutine(raw.routines?.default) },
     completion: {

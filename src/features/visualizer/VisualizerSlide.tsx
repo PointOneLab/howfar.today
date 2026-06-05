@@ -2,6 +2,8 @@ import { useMemo, useRef } from 'react';
 import type { CSSProperties } from 'react';
 import type { DayView, SegmentView } from '@/core/engine/status';
 import { groupByHour } from '@/core/engine/segments';
+import { MAX_GOAL_LENGTH } from '@/core/model/defaults';
+import { MaterialIcon } from '@/components/icons/MaterialIcon';
 import { useConfigStore } from '@/state/store';
 
 interface VisualizerSlideProps {
@@ -9,11 +11,6 @@ interface VisualizerSlideProps {
   onToggleComplete: (minuteOfDay: number, currentlyCompleted: boolean) => void;
 }
 
-/**
- * Slide 2 — the day visualizer. Hour rows divide the viewport equally; each row
- * holds the configured number of sub-segments. Goals are editable inline in any
- * state, with a dedicated keyboard layer (Enter / Shift+Enter / Escape).
- */
 export function VisualizerSlide({ view, onToggleComplete }: VisualizerSlideProps) {
   const setGoal = useConfigStore((s) => s.setGoal);
   const inputs = useRef<Map<number, HTMLInputElement>>(new Map());
@@ -54,6 +51,17 @@ export function VisualizerSlide({ view, onToggleComplete }: VisualizerSlideProps
     }
   };
 
+  const handleGoalChange = (minuteOfDay: number, next: string) => {
+    if (next.length > MAX_GOAL_LENGTH) {
+      window.alert(`Goals are limited to ${MAX_GOAL_LENGTH} characters.`);
+      return;
+    }
+    const ok = setGoal(minuteOfDay, next);
+    if (!ok) {
+      window.alert(`Goals are limited to ${MAX_GOAL_LENGTH} characters.`);
+    }
+  };
+
   const style = { '--rows': rows.length || 1 } as CSSProperties;
 
   return (
@@ -69,6 +77,7 @@ export function VisualizerSlide({ view, onToggleComplete }: VisualizerSlideProps
               : sv.state === 'future'
                 ? 0
                 : 100;
+            const hasGoal = sv.goal.trim().length > 0;
 
             return (
               <div className={`segment segment--${sv.state}`} key={segment.index}>
@@ -83,17 +92,15 @@ export function VisualizerSlide({ view, onToggleComplete }: VisualizerSlideProps
                     className="segment__input"
                     type="text"
                     value={sv.goal}
-                    placeholder="goal…"
-                    maxLength={200}
                     aria-label={`Goal for ${segment.startLabel}`}
                     ref={(el) => {
                       if (el) inputs.current.set(segment.index, el);
                       else inputs.current.delete(segment.index);
                     }}
-                    onChange={(e) => setGoal(segment.minuteOfDay, e.target.value)}
+                    onChange={(e) => handleGoalChange(segment.minuteOfDay, e.target.value)}
                     onKeyDown={(e) => handleKeyDown(e, segment.index)}
                   />
-                  {sv.completable && (
+                  {hasGoal && sv.completable ? (
                     <button
                       type="button"
                       className="segment__check"
@@ -101,9 +108,9 @@ export function VisualizerSlide({ view, onToggleComplete }: VisualizerSlideProps
                       aria-pressed={sv.isCompleted}
                       title={sv.isCompleted ? 'Revert completion' : 'Mark completed'}
                     >
-                      {sv.isCompleted ? '↶' : '✓'}
+                      <MaterialIcon name={sv.isCompleted ? 'undo' : 'check'} />
                     </button>
-                  )}
+                  ) : null}
                 </div>
               </div>
             );

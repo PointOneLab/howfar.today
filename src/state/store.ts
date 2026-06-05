@@ -1,6 +1,24 @@
 import { create } from 'zustand';
 import type { AppConfig, DesignTokens, StructuralConfig } from '@/core/model/types';
-import { createDefaultConfig } from '@/core/model/defaults';
+import {
+  createDefaultConfig,
+  MAX_CHECK_SCALE_PCT,
+  MAX_FOCUS_SCALE_PCT,
+  MAX_FONT_SCALE_PCT,
+  MAX_GOAL_LENGTH,
+  MAX_MASK_OPACITY_PCT,
+  MAX_PROFILE_NAME_LENGTH,
+  MAX_SEGMENT_GAP,
+  MAX_SEGMENT_GAP_RATIO,
+  MAX_TIME_SCALE_PCT,
+  MIN_CHECK_SCALE_PCT,
+  MIN_FOCUS_SCALE_PCT,
+  MIN_FONT_SCALE_PCT,
+  MIN_MASK_OPACITY_PCT,
+  MIN_SEGMENT_GAP,
+  MIN_SEGMENT_GAP_RATIO,
+  MIN_TIME_SCALE_PCT,
+} from '@/core/model/defaults';
 import { sanitizeConfig } from '@/core/model/validate';
 import { buildSegments } from '@/core/engine/segments';
 import { createLocalStorageAdapter } from '@/core/storage/localStorageAdapter';
@@ -19,21 +37,23 @@ interface ConfigActions {
   setFontScale: (pct: number) => void;
   setTimeScale: (pct: number) => void;
   setSegmentGap: (vw: number) => void;
+  setSegmentGapRatio: (pct: number) => void;
+  setCheckScale: (pct: number) => void;
+  setFocusGoalScale: (pct: number) => void;
+  setFocusMetaScale: (pct: number) => void;
+  setFocusCheckScale: (pct: number) => void;
+  setMaskOpacity: (pct: number) => void;
+  setMotionEasing: (easing: string) => void;
+  setProfileName: (name: string) => void;
   setStatusColoring: (on: boolean) => void;
-  setGoal: (minuteOfDay: number, text: string) => void;
-  /** Adds or removes a completion for the active window; clamps to the window date. */
+  setGoal: (minuteOfDay: number, text: string) => boolean;
   setCompleted: (minuteOfDay: number, completed: boolean, windowDateKey: string) => void;
-  /** Resets daily completion state when a new routine window begins. */
   syncWindow: (windowDateKey: string | null) => void;
-  /** Replaces the whole config (CSV import). */
   replaceConfig: (config: AppConfig) => void;
-  /** Clears all goals and completion (the planned content), keeps the design. */
   resetContent: () => void;
-  /** Restores default structure, tokens, fonts and behavior, keeps the content. */
   resetDesign: () => void;
 }
 
-/** Removes goals/completions that no longer map to a segment in the structure. */
 function pruneToStructure(
   structure: StructuralConfig,
   goals: Record<number, string>,
@@ -69,26 +89,66 @@ export const useConfigStore = create<ConfigStore>((set) => ({
 
   setToken: (key, value) => set((state) => ({ tokens: { ...state.tokens, [key]: value } })),
 
-  setFontScale: (pct) => set(() => ({ fontScalePct: clampScale(pct, 25, 75) })),
+  setFontScale: (pct) =>
+    set(() => ({ fontScalePct: clampScale(pct, MIN_FONT_SCALE_PCT, MAX_FONT_SCALE_PCT) })),
 
-  setTimeScale: (pct) => set(() => ({ timeScalePct: clampScale(pct, 10, 60) })),
+  setTimeScale: (pct) =>
+    set(() => ({ timeScalePct: clampScale(pct, MIN_TIME_SCALE_PCT, MAX_TIME_SCALE_PCT) })),
 
-  setSegmentGap: (vw) => set(() => ({ segmentGap: Math.min(3, Math.max(0, vw)) })),
+  setSegmentGap: (vw) => set(() => ({ segmentGap: Math.min(MAX_SEGMENT_GAP, Math.max(MIN_SEGMENT_GAP, vw)) })),
+
+  setSegmentGapRatio: (pct) =>
+    set(() => ({
+      segmentGapRatio: clampScale(pct, MIN_SEGMENT_GAP_RATIO, MAX_SEGMENT_GAP_RATIO),
+    })),
+
+  setCheckScale: (pct) =>
+    set(() => ({ checkScalePct: clampScale(pct, MIN_CHECK_SCALE_PCT, MAX_CHECK_SCALE_PCT) })),
+
+  setFocusGoalScale: (pct) =>
+    set(() => ({
+      focusGoalScalePct: clampScale(pct, MIN_FOCUS_SCALE_PCT, MAX_FOCUS_SCALE_PCT),
+    })),
+
+  setFocusMetaScale: (pct) =>
+    set(() => ({
+      focusMetaScalePct: clampScale(pct, MIN_FOCUS_SCALE_PCT, MAX_FOCUS_SCALE_PCT),
+    })),
+
+  setFocusCheckScale: (pct) =>
+    set(() => ({
+      focusCheckScalePct: clampScale(pct, MIN_FOCUS_SCALE_PCT, MAX_FOCUS_SCALE_PCT),
+    })),
+
+  setMaskOpacity: (pct) =>
+    set(() => ({ maskOpacityPct: clampScale(pct, MIN_MASK_OPACITY_PCT, MAX_MASK_OPACITY_PCT) })),
+
+  setMotionEasing: (easing) => set(() => ({ motionEasing: easing })),
+
+  setProfileName: (name) =>
+    set(() => ({ profileName: name.trim().slice(0, MAX_PROFILE_NAME_LENGTH) })),
 
   setStatusColoring: (on) =>
     set((state) => ({ behavior: { ...state.behavior, statusColoring: on } })),
 
-  setGoal: (minuteOfDay, text) =>
+  setGoal: (minuteOfDay, text) => {
+    let blocked = false;
     set((state) => {
       const goals = { ...state.routines.default.goals };
-      const value = text.slice(0, 200);
+      const value = text.trim();
       if (value.length > 0) {
+        if (value.length > MAX_GOAL_LENGTH) {
+          blocked = true;
+          return state;
+        }
         goals[minuteOfDay] = value;
       } else {
         delete goals[minuteOfDay];
       }
       return { routines: { ...state.routines, default: { goals } } };
-    }),
+    });
+    return !blocked;
+  },
 
   setCompleted: (minuteOfDay, completed, windowDateKey) =>
     set((state) => {
@@ -119,12 +179,20 @@ export const useConfigStore = create<ConfigStore>((set) => ({
 
   resetDesign: () => {
     const defaults = createDefaultConfig();
-    set(() => ({
+    set((state) => ({
       tokens: defaults.tokens,
       fontScalePct: defaults.fontScalePct,
       timeScalePct: defaults.timeScalePct,
       segmentGap: defaults.segmentGap,
+      segmentGapRatio: defaults.segmentGapRatio,
+      checkScalePct: defaults.checkScalePct,
+      focusGoalScalePct: defaults.focusGoalScalePct,
+      focusMetaScalePct: defaults.focusMetaScalePct,
+      focusCheckScalePct: defaults.focusCheckScalePct,
+      maskOpacityPct: defaults.maskOpacityPct,
+      motionEasing: defaults.motionEasing,
       behavior: defaults.behavior,
+      profileName: state.profileName,
     }));
   },
 }));
@@ -145,7 +213,6 @@ function sanitizeStructurePatch(
   };
 }
 
-/** Selects just the persistable {@link AppConfig} slice from the store. */
 export function selectConfig(state: ConfigStore): AppConfig {
   return {
     version: state.version,
@@ -154,13 +221,20 @@ export function selectConfig(state: ConfigStore): AppConfig {
     fontScalePct: state.fontScalePct,
     timeScalePct: state.timeScalePct,
     segmentGap: state.segmentGap,
+    segmentGapRatio: state.segmentGapRatio,
+    checkScalePct: state.checkScalePct,
+    focusGoalScalePct: state.focusGoalScalePct,
+    focusMetaScalePct: state.focusMetaScalePct,
+    focusCheckScalePct: state.focusCheckScalePct,
+    maskOpacityPct: state.maskOpacityPct,
+    motionEasing: state.motionEasing,
+    profileName: state.profileName,
     behavior: state.behavior,
     routines: state.routines,
     completion: state.completion,
   };
 }
 
-// Persist every change. The selector keeps us from serializing action identities.
 let lastSerialized = JSON.stringify(selectConfig(useConfigStore.getState()));
 useConfigStore.subscribe((state) => {
   const next = JSON.stringify(selectConfig(state));
