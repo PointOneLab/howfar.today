@@ -1,10 +1,23 @@
 import { useCallback, useEffect } from 'react';
 import type { RefObject } from 'react';
 
+const MOUSE_WHEEL_STEP_THRESHOLD = 40;
+const WHEEL_NAV_COOLDOWN_MS = 420;
+
 function isEditingTarget(el: Element | null): boolean {
   if (!el) return false;
   const tag = el.tagName;
   return tag === 'INPUT' || tag === 'TEXTAREA' || (el as HTMLElement).isContentEditable;
+}
+
+function isDiscreteMouseWheel(event: WheelEvent): boolean {
+  if (event.deltaMode === WheelEvent.DOM_DELTA_LINE || event.deltaMode === WheelEvent.DOM_DELTA_PAGE) {
+    return true;
+  }
+  // Pixel-mode wheel events from classic mice are typically larger, bursty deltas.
+  const absY = Math.abs(event.deltaY);
+  const absX = Math.abs(event.deltaX);
+  return absY >= MOUSE_WHEEL_STEP_THRESHOLD && absY >= absX * 1.2;
 }
 
 /**
@@ -45,8 +58,36 @@ export function useSlideNav(deckRef: RefObject<HTMLDivElement>): { goTo: (index:
       goTo(event.key === 'ArrowDown' ? current + 1 : current - 1);
     };
 
+    let wheelLocked = false;
+    let wheelUnlockTimer = 0;
+    const onWheel = (event: WheelEvent) => {
+      const deck = deckRef.current;
+      if (!deck) return;
+      if (isEditingTarget(document.activeElement)) return;
+      if (!isDiscreteMouseWheel(event)) return;
+      if (event.ctrlKey) return;
+
+      event.preventDefault();
+      if (wheelLocked) return;
+      const direction = event.deltaY > 0 ? 1 : event.deltaY < 0 ? -1 : 0;
+      if (direction === 0) return;
+
+      const current = Math.round(deck.scrollTop / deck.clientHeight);
+      goTo(current + direction);
+
+      wheelLocked = true;
+      wheelUnlockTimer = window.setTimeout(() => {
+        wheelLocked = false;
+      }, WHEEL_NAV_COOLDOWN_MS);
+    };
+
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    window.addEventListener('wheel', onWheel, { passive: false });
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('wheel', onWheel);
+      if (wheelUnlockTimer) window.clearTimeout(wheelUnlockTimer);
+    };
   }, [deckRef, goTo]);
 
   return { goTo };
