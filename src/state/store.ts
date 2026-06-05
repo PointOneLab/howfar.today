@@ -162,6 +162,7 @@ export const useConfigStore = create<ConfigStore>((set) => ({
     let blocked = false;
     set((state) => {
       const goals = { ...state.routines.default.goals };
+      const completed = new Set(state.completion.completed);
       const value = text;
       if (value.trim().length > 0) {
         if (value.length > MAX_GOAL_LENGTH) {
@@ -171,8 +172,12 @@ export const useConfigStore = create<ConfigStore>((set) => ({
         goals[minuteOfDay] = value;
       } else {
         delete goals[minuteOfDay];
+        completed.delete(minuteOfDay);
       }
-      return { routines: { ...state.routines, default: { goals } } };
+      return {
+        routines: { ...state.routines, default: { goals } },
+        completion: { ...state.completion, completed: [...completed].sort((a, b) => a - b) },
+      };
     });
     return !blocked;
   },

@@ -45,7 +45,7 @@ export function FocusSlide({ view, onToggleComplete }: FocusSlideProps) {
         </div>
 
         <div className={`focus__goal${goalText ? '' : ' focus__goal--empty'}${goalStatusClass}`}>
-          {goalText || 'No goal'}
+          {goalText || 'Set a goal, and complete the goal.'}
         </div>
 
         {goalText ? (
