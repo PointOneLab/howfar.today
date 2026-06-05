@@ -162,8 +162,8 @@ export const useConfigStore = create<ConfigStore>((set) => ({
     let blocked = false;
     set((state) => {
       const goals = { ...state.routines.default.goals };
-      const value = text.trim();
-      if (value.length > 0) {
+      const value = text;
+      if (value.trim().length > 0) {
         if (value.length > MAX_GOAL_LENGTH) {
           blocked = true;
           return state;

@@ -87,4 +87,19 @@ describe('store — structure pruning', () => {
     expect(state.fontScalePct).toBe(createDefaultConfig().fontScalePct);
     expect(state.routines.default.goals[minuteOf(9, 0)]).toBe('keep me');
   });
+
+  it('keeps spaces while editing goal text', () => {
+    const store = useConfigStore.getState();
+    store.setGoal(minuteOf(9, 0), 'deep work block');
+    let state = useConfigStore.getState();
+    expect(state.routines.default.goals[minuteOf(9, 0)]).toBe('deep work block');
+
+    store.setGoal(minuteOf(9, 0), 'deep work block ');
+    state = useConfigStore.getState();
+    expect(state.routines.default.goals[minuteOf(9, 0)]).toBe('deep work block ');
+
+    store.setGoal(minuteOf(9, 0), '   ');
+    state = useConfigStore.getState();
+    expect(state.routines.default.goals[minuteOf(9, 0)]).toBeUndefined();
+  });
 });
