@@ -27,8 +27,26 @@
   --focus-check-scale: 1;
   --motion-easing: ease-out;
 
-  --font-primary: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'Roboto Mono', Menlo, Consolas, monospace;
+  --font-primary: 'Howfar Primary', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial,
+    sans-serif;
+  --font-mono: 'Howfar Mono', ui-monospace, 'SF Mono', 'Cascadia Code', 'Roboto Mono', Menlo,
+    Consolas, monospace;
+}
+
+@font-face {
+  font-family: 'Howfar Primary';
+  src: url('/fonts/howfar-primary.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Howfar Mono';
+  src: url('/fonts/howfar-mono.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
 }
 
 *,
@@ -189,7 +207,7 @@ button {
 }
 
 .focus__status--done {
-  color: var(--color-success);
+  color: var(--color-highlight);
 }
 
 .focus__idle {
@@ -207,7 +225,6 @@ button {
   display: flex;
   flex-direction: column;
   background: var(--bg-app);
-  border-top: var(--stroke-grid) solid var(--color-grid);
   border-left: var(--stroke-grid) solid var(--color-grid);
   border-right: var(--stroke-grid) solid var(--color-grid);
   border-bottom: var(--stroke-grid) solid var(--color-grid);
@@ -220,9 +237,6 @@ button {
   border-top: var(--stroke-grid) solid var(--color-grid);
 }
 
-.hour-row:first-child {
-  border-top: 0;
-}
 
 .segment {
   position: relative;
@@ -312,7 +326,7 @@ button {
 }
 
 .segment--completed .segment__check {
-  color: var(--color-success);
+  color: var(--color-highlight);
 }
 
 /* --- Slide 3: Hub ------------------------------------------------------ */
@@ -338,6 +352,57 @@ button {
   font-size: 5vh;
   font-weight: 600;
   color: var(--color-highlight);
+}
+
+.hub__tagline {
+  font-size: 2.4vh;
+  color: var(--color-secondary);
+  margin-top: -2vh;
+}
+
+.share-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1vh;
+}
+
+.share-qr img {
+  background: #fff;
+  padding: 1vh;
+}
+
+.share-qr__hint,
+.share-qr--empty {
+  font-size: 1.7vh;
+  color: var(--color-secondary);
+  text-align: center;
+}
+
+.about-article h1 {
+  font-size: 2.8vh;
+  color: var(--color-highlight);
+  margin-bottom: 1vh;
+}
+
+.about-article h2 {
+  font-size: 2.3vh;
+  color: var(--color-highlight);
+  margin-top: 2vh;
+  margin-bottom: 0.8vh;
+}
+
+.about-article h3 {
+  font-size: 2vh;
+  color: var(--color-regular);
+  margin-top: 1.6vh;
+  margin-bottom: 0.6vh;
+}
+
+.about-article p {
+  font-size: 1.9vh;
+  line-height: 1.45;
+  color: var(--color-regular);
 }
 
 .hub__nav {

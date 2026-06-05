@@ -9,19 +9,20 @@ interface MaterialIconProps {
   title?: string;
 }
 
-/** Material Symbols Sharp paths, bundled at build time (no runtime CDN). */
-const PATHS: Record<MaterialIconName, string> = {
-  check:
-    'M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z',
-  undo: 'M12.5 8c-2.65 0-5.05 1.54-6.17 3.95L3.5 10.5V16h5.5l-2.07-2.07c.78-1.27 2.16-2.18 3.77-2.18 2.48 0 4.5 2.02 4.5 4.5s-2.02 4.5-4.5 4.5c-1.56 0-2.94-.8-3.75-2.03l-1.45 1.09C8.98 18.98 10.68 20 12.5 20c3.59 0 6.5-2.91 6.5-6.5S16.09 8 12.5 8z',
+/** Material Symbols Sharp (48dp) — bundled paths, viewBox 0 -960 960 960. */
+const ICONS: Record<MaterialIconName, string> = {
+  check: 'M378-246 154-470l43-43 181 181 384-384 43 43-427 427Z',
+  undo: 'M259-200v-60h310q70 0 120.5-46.5T740-422q0-69-50.5-115.5T569-584H274l114 114-42 42-186-186 186-186 42 42-114 114h294q95 0 163.5 64T800-422q0 94-68.5 158T568-200H259Z',
 };
+
+const VIEW_BOX = '0 -960 960 960';
 
 export function MaterialIcon({ name, className, style, title }: MaterialIconProps) {
   return (
     <svg
       className={className}
       style={style}
-      viewBox="0 0 24 24"
+      viewBox={VIEW_BOX}
       width="1em"
       height="1em"
       fill="currentColor"
@@ -29,7 +30,7 @@ export function MaterialIcon({ name, className, style, title }: MaterialIconProp
       role={title ? 'img' : 'presentation'}
     >
       {title ? <title>{title}</title> : null}
-      <path d={PATHS[name]} />
+      <path d={ICONS[name]} />
     </svg>
   );
 }

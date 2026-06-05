@@ -42,6 +42,10 @@ export function VisualizerSlide({ view, onToggleComplete }: VisualizerSlideProps
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+    // Prevent the scroll-snap deck from treating Space as page scroll while typing.
+    if (event.key === ' ') {
+      event.stopPropagation();
+    }
     if (event.key === 'Enter') {
       event.preventDefault();
       moveFocus(index, event.shiftKey ? -1 : 1);
