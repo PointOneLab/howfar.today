@@ -20,7 +20,12 @@
   --stroke-grid: 1px;
   --font-scale-goal: 0.5;
   --font-scale-time: 0.28;
-  --segment-gap: 0.6vw;
+  --segment-gap: 0.5em;
+  --check-scale: 1;
+  --focus-goal-scale: 1;
+  --focus-meta-scale: 1;
+  --focus-check-scale: 1;
+  --motion-easing: ease-out;
 
   --font-primary: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'Roboto Mono', Menlo, Consolas, monospace;
@@ -70,6 +75,12 @@ button {
   scroll-snap-type: y mandatory;
   scroll-behavior: smooth;
   scrollbar-width: none;
+}
+
+@supports (animation-timing-function: linear) {
+  .deck {
+    scroll-behavior: smooth;
+  }
 }
 
 .deck::-webkit-scrollbar {
@@ -136,9 +147,9 @@ button {
   width: 100%;
 }
 
-.focus__bounds {
+.focus__meta {
   font-family: var(--font-mono);
-  font-size: 3.2vh;
+  font-size: calc(3.2vh * var(--focus-meta-scale));
   letter-spacing: 0.05em;
   color: var(--color-highlight);
 }
@@ -150,7 +161,7 @@ button {
   justify-content: center;
   text-align: center;
   width: 100%;
-  font-size: clamp(4vh, 9vh, 14vw);
+  font-size: calc(clamp(4vh, 9vh, 14vw) * var(--focus-goal-scale));
   font-weight: 600;
   line-height: 1.1;
   color: var(--color-highlight);
@@ -166,9 +177,9 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 12vh;
-  height: 12vh;
-  font-size: 5vh;
+  width: calc(12vh * var(--focus-check-scale));
+  height: calc(12vh * var(--focus-check-scale));
+  font-size: calc(5vh * var(--focus-check-scale));
   color: var(--color-interact);
   cursor: pointer;
 }
@@ -196,6 +207,10 @@ button {
   display: flex;
   flex-direction: column;
   background: var(--bg-app);
+  border-top: var(--stroke-grid) solid var(--color-grid);
+  border-left: var(--stroke-grid) solid var(--color-grid);
+  border-right: var(--stroke-grid) solid var(--color-grid);
+  border-bottom: var(--stroke-grid) solid var(--color-grid);
 }
 
 .hour-row {
@@ -277,11 +292,6 @@ button {
   white-space: nowrap;
 }
 
-.segment__input::placeholder {
-  color: var(--color-secondary);
-  opacity: 0.5;
-}
-
 .segment__input:focus,
 .segment--active .segment__input {
   color: var(--color-highlight);
@@ -294,7 +304,9 @@ button {
   justify-content: center;
   height: 100%;
   padding: 0 var(--segment-gap);
-  font-size: calc(var(--font-scale-goal) * 0.8 * (100vh / var(--rows, 17)));
+  font-size: calc(
+    var(--font-scale-goal) * var(--check-scale) * 0.8 * (100vh / var(--rows, 17))
+  );
   color: var(--color-interact);
   cursor: pointer;
 }
@@ -303,34 +315,134 @@ button {
   color: var(--color-success);
 }
 
-/* --- Slide 3: Settings ------------------------------------------------- */
+/* --- Slide 3: Hub ------------------------------------------------------ */
 
-.settings {
+.hub {
   background: var(--bg-app);
-  overflow-y: auto;
-  padding: 6vh 8vw;
   display: flex;
-  flex-direction: column;
-  gap: 4vh;
+  align-items: center;
+  justify-content: center;
 }
 
-.settings__title {
-  font-size: 4vh;
+.hub__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4vh;
+  text-align: center;
+  padding: 6vh 8vw;
+}
+
+.hub__brand {
+  font-size: 5vh;
   font-weight: 600;
   color: var(--color-highlight);
 }
 
-.settings__section {
+.hub__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5vw;
+  justify-content: center;
+}
+
+.hub__note {
+  max-width: 80vw;
+}
+
+/* --- Modals ------------------------------------------------------------ */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+  padding: 4vh 4vw;
+}
+
+.modal__panel {
+  width: min(92vw, 72vh);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-app);
+  border: var(--stroke-grid) solid var(--color-grid);
+}
+
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.6vh 2vw;
+  border-bottom: var(--stroke-grid) solid var(--color-grid);
+}
+
+.modal__title {
+  font-size: 2.4vh;
+  color: var(--color-highlight);
+}
+
+.modal__close {
+  font-size: 3vh;
+  line-height: 1;
+  color: var(--color-secondary);
+  cursor: pointer;
+  padding: 0 0.5vw;
+}
+
+.modal__body {
+  overflow-y: auto;
+  padding: 2vh 2vw;
   display: flex;
   flex-direction: column;
   gap: 1.6vh;
 }
 
-.settings__heading {
-  font-size: 2vh;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+.modal__footer {
+  padding: 1.6vh 2vw;
+  border-top: var(--stroke-grid) solid var(--color-grid);
+}
+
+.modal__footer-inline {
+  margin-top: 1vh;
+}
+
+.modal__hint {
+  font-size: 1.8vh;
   color: var(--color-secondary);
+}
+
+.share-fields {
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2vh;
+}
+
+.share-fields__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 1vw;
+  font-size: 2vh;
+  color: var(--color-regular);
+  cursor: pointer;
+}
+
+.share-fields__row--disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.field__text {
+  background: var(--color-void);
+  color: var(--color-regular);
+  padding: 0.6vh 1vw;
+  font-size: 2.2vh;
+  min-width: 20vw;
 }
 
 .field {

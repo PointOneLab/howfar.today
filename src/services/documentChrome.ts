@@ -13,15 +13,15 @@ export function activeRemainingSeconds(view: DayView): number | null {
 
 /**
  * Builds the live tab title.
- *  - Active with goal:  "[MM:SS] | Write report — howfar.today"
- *  - Active, no goal:   "[MM:SS] | Focus — howfar.today"
+ *  - Active with goal:  "Write report | 12:34"
+ *  - Active, no goal:   "No goal | 12:34"
  *  - Outside window:    "howfar.today"
  */
 export function buildTabTitle(view: DayView): string {
   const remaining = activeRemainingSeconds(view);
   if (remaining === null || !view.active) return BRAND;
-  const goal = view.active.goal.trim() || 'Focus';
-  return `[${formatCountdown(remaining)}] | ${goal} — ${BRAND}`;
+  const goal = view.active.goal.trim() || 'No goal';
+  return `${goal} | ${formatCountdown(remaining)}`;
 }
 
 /** Picks the favicon accent color for a given segment state. */
@@ -63,9 +63,19 @@ export function svgToDataUrl(svg: string): string {
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 }
 
-/** Applies the title and favicon to the document head. */
+let lastFaviconKey = '';
+
+/** Applies the title and favicon to the document head (favicon throttled when tab hidden). */
 export function applyDocumentChrome(view: DayView, tokens: DesignTokens): void {
   document.title = buildTabTitle(view);
+
+  if (document.visibilityState === 'hidden') return;
+
+  const progress = view.active ? view.activeProgress : view.phase === 'after' ? 1 : 0;
+  const state = view.active ? view.active.state : 'none';
+  const key = `${state}:${Math.round(progress * 20)}:${tokens.bgApp}`;
+  if (key === lastFaviconKey) return;
+  lastFaviconKey = key;
 
   const href = svgToDataUrl(buildFaviconSvg(view, tokens));
   let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');

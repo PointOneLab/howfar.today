@@ -77,9 +77,9 @@ export function segmentState(
   return statusColoring ? 'failed' : 'past';
 }
 
-/** Whether completion may be toggled: active or past segments while in-window. */
-function isCompletable(segment: Segment, phase: DayPhase, activeIndex: number | null): boolean {
-  return phase === 'in' && activeIndex !== null && segment.index <= activeIndex;
+/** Whether completion may be toggled (any segment, any phase). */
+function isCompletable(_segment: Segment, _phase: DayPhase, _activeIndex: number | null): boolean {
+  return true;
 }
 
 /** Builds the full {@link DayView} from configuration and the current time. */

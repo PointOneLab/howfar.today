@@ -3,7 +3,7 @@ import type { AppConfig } from '@/core/model/types';
 import { buildDayView, type DayView } from '@/core/engine/status';
 import { locateWindow, toLocalDateKey } from '@/core/engine/time';
 import { DEFAULT_TOKENS } from '@/core/model/defaults';
-import { useConfigStore } from '@/state/store';
+import { selectConfig, useConfigStore } from '@/state/store';
 
 /**
  * Computes the time-resolved {@link DayView} from current configuration and a
@@ -16,16 +16,14 @@ export function useDayView(now: Date): DayView {
   const completion = useConfigStore((s) => s.completion);
 
   return useMemo<DayView>(() => {
+    const state = useConfigStore.getState();
     const config: AppConfig = {
-      version: 1,
-      structure,
+      ...selectConfig(state),
       tokens: DEFAULT_TOKENS,
-      fontScalePct: 50,
-      timeScalePct: 28,
-      segmentGap: 0.6,
       behavior: { statusColoring },
       routines: { default: { goals } },
       completion,
+      structure,
     };
     return buildDayView(config, now);
   }, [structure, statusColoring, goals, completion, now]);

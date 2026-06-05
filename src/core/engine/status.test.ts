@@ -24,12 +24,9 @@ describe('buildDayView', () => {
     expect(view.segments.every((s) => s.editable)).toBe(true);
   });
 
-  it('allows completion on active and past segments but not future ones', () => {
+  it('allows completion on any segment including future', () => {
     const view = buildDayView(baseConfig(), at(9, 0));
-    const activeIndex = view.activeIndex ?? -1;
-    expect(view.segments[0].completable).toBe(true); // past
-    expect(view.segments[activeIndex].completable).toBe(true); // active
-    expect(view.segments[view.segments.length - 1].completable).toBe(false); // future
+    expect(view.segments.every((s) => s.completable)).toBe(true);
   });
 
   it('fails empty past segments when status coloring is on', () => {

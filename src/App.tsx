@@ -1,17 +1,17 @@
-import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useClock } from '@/hooks/useClock';
 import { useDayView, useWindowSync } from '@/hooks/useDayView';
 import { useSlideNav } from '@/hooks/useSlideNav';
 import { useScrollMask } from '@/hooks/useScrollMask';
+import { useDeckScrollLock } from '@/hooks/useDeckScrollLock';
 import { useConfigStore } from '@/state/store';
 import { locateWindow, toLocalDateKey } from '@/core/engine/time';
 import { applyTokens } from '@/services/tokens';
 import { applyDocumentChrome } from '@/services/documentChrome';
 import { FocusSlide } from '@/features/focus/FocusSlide';
 import { VisualizerSlide } from '@/features/visualizer/VisualizerSlide';
-import { SettingsSlide } from '@/features/settings/SettingsSlide';
+import { applyIncomingShareHash, HubSlide } from '@/features/settings/HubSlide';
 
-/** Slide index the app opens on: the Day Visualizer (the main screen). */
 const LANDING_SLIDE = 1;
 
 export default function App() {
@@ -22,15 +22,23 @@ export default function App() {
   const tokens = useConfigStore((s) => s.tokens);
   const fontScalePct = useConfigStore((s) => s.fontScalePct);
   const timeScalePct = useConfigStore((s) => s.timeScalePct);
-  const segmentGap = useConfigStore((s) => s.segmentGap);
+  const segmentGapRatio = useConfigStore((s) => s.segmentGapRatio);
+  const checkScalePct = useConfigStore((s) => s.checkScalePct);
+  const focusGoalScalePct = useConfigStore((s) => s.focusGoalScalePct);
+  const focusMetaScalePct = useConfigStore((s) => s.focusMetaScalePct);
+  const focusCheckScalePct = useConfigStore((s) => s.focusCheckScalePct);
+  const maskOpacityPct = useConfigStore((s) => s.maskOpacityPct);
+  const motionEasing = useConfigStore((s) => s.motionEasing);
   const structure = useConfigStore((s) => s.structure);
   const setCompleted = useConfigStore((s) => s.setCompleted);
 
   const deckRef = useRef<HTMLDivElement>(null);
-  useSlideNav(deckRef);
-  useScrollMask(deckRef);
+  const [modalOpen, setModalOpen] = useState(false);
 
-  // Open on the main (visualizer) screen, instantly (no smooth-scroll animation).
+  useSlideNav(deckRef);
+  useScrollMask(deckRef, { maxMaskPct: maskOpacityPct, motionEasing });
+  useDeckScrollLock(deckRef, modalOpen);
+
   useLayoutEffect(() => {
     const deck = deckRef.current;
     if (!deck) return;
@@ -40,7 +48,10 @@ export default function App() {
     deck.style.scrollBehavior = prev;
   }, []);
 
-  // Completion may be toggled on active or past segments while in-window.
+  useEffect(() => {
+    applyIncomingShareHash();
+  }, []);
+
   const toggleComplete = useCallback(
     (minuteOfDay: number, currentlyCompleted: boolean) => {
       const position = locateWindow(structure, now);
@@ -50,12 +61,28 @@ export default function App() {
     [structure, now, setCompleted],
   );
 
-  // Live theming: push tokens and layout scales to CSS custom properties.
   useEffect(() => {
-    applyTokens(tokens, { fontScalePct, timeScalePct, segmentGap });
-  }, [tokens, fontScalePct, timeScalePct, segmentGap]);
+    document.documentElement.style.setProperty('--motion-easing', motionEasing);
+    applyTokens(tokens, {
+      fontScalePct,
+      timeScalePct,
+      segmentGapRatio,
+      checkScalePct,
+      focusGoalScalePct,
+      focusMetaScalePct,
+      focusCheckScalePct,
+    });
+  }, [
+    tokens,
+    fontScalePct,
+    timeScalePct,
+    segmentGapRatio,
+    checkScalePct,
+    focusGoalScalePct,
+    focusMetaScalePct,
+    focusCheckScalePct,
+  ]);
 
-  // Live tab title + favicon.
   useEffect(() => {
     applyDocumentChrome(view, tokens);
   }, [view, tokens]);
@@ -64,7 +91,7 @@ export default function App() {
     <div className="deck" ref={deckRef}>
       <FocusSlide view={view} onToggleComplete={toggleComplete} />
       <VisualizerSlide view={view} onToggleComplete={toggleComplete} />
-      <SettingsSlide />
+      <HubSlide onModalOpenChange={setModalOpen} />
     </div>
   );
 }
